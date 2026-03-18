@@ -1,4 +1,8 @@
-# Short URL API
+<div align="center">
+  <img src="https://res.cloudinary.com/dmoi0mmuj/image/upload/c_pad,w_800/v1773872265/Gemini_Generated_Image_r1wqexr1wqexr1wq_r7xz8y.png" alt="Short URL API Banner" />
+</div>
+
+<br/>
 
 API REST de encurtamento de URLs. Permite criar, consultar, atualizar e remover URLs curtas, além de consultar estatísticas de acesso. 
 Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto foco em segurança, escalabilidade e qualidade guiada por **TDD (Test-Driven Development)**.
