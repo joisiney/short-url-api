@@ -80,7 +80,7 @@ export class ShortenController {
           message: result.error.message,
         });
       }
-      throw result.error;
+      throw result.error as Error;
     }
 
     return ShortUrlPresenter.toResponse(result.value);
@@ -106,7 +106,7 @@ export class ShortenController {
           message: result.error.message,
         });
       }
-      throw result.error;
+      throw result.error as Error;
     }
 
     return ShortUrlPresenter.toResponse(result.value);
@@ -138,7 +138,7 @@ export class ShortenController {
           message: result.error.message,
         });
       }
-      throw result.error;
+      throw result.error as Error;
     }
 
     return ShortUrlPresenter.toResponse(result.value);
@@ -164,7 +164,7 @@ export class ShortenController {
           message: result.error.message,
         });
       }
-      throw result.error;
+      throw result.error as Error;
     }
   }
 
@@ -188,7 +188,7 @@ export class ShortenController {
           message: result.error.message,
         });
       }
-      throw result.error;
+      throw result.error as Error;
     }
 
     return ShortUrlPresenter.toStatsResponse(result.value);
