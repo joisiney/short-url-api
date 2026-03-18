@@ -47,6 +47,9 @@ describe('CreateShortUrlUseCase', () => {
     expect(result.value?.createdAt).toBeInstanceOf(Date);
     expect(result.value?.updatedAt).toBeInstanceOf(Date);
     expect(createMock).toHaveBeenCalledTimes(1);
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({ accessCount: 0 }),
+    );
   });
 
   it('deve retornar createdAt e updatedAt iguais na criação', async () => {

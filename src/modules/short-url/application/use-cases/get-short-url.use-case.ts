@@ -13,6 +13,7 @@ export type GetShortUrlOutput = {
   id: string;
   url: string;
   shortCode: string;
+  accessCount: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -41,6 +42,7 @@ export class GetShortUrlUseCase {
       id: shortUrl.id,
       url: shortUrl.url,
       shortCode: shortUrl.shortCode,
+      accessCount: shortUrl.accessCount + 1,
       createdAt: shortUrl.createdAt,
       updatedAt: shortUrl.updatedAt,
     });

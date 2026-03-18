@@ -120,11 +120,10 @@ export class ShortenController {
   @ApiResponse({ status: 200, type: ShortUrlResponse })
   @ApiResponse({ status: 400, description: 'Payload ou parâmetro inválido' })
   @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
-  @UsePipes(new ZodValidationPipe(updateShortUrlSchema))
   async update(
     @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
     shortCode: string,
-    @Body() body: UpdateShortUrlRequestDto,
+    @Body(new ZodValidationPipe(updateShortUrlSchema)) body: UpdateShortUrlRequestDto,
   ): Promise<ShortUrlResponse> {
     const result = await this.updateShortUrl.execute({
       shortCode,

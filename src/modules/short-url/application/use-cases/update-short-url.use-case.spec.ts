@@ -48,6 +48,9 @@ describe('UpdateShortUrlUseCase', () => {
     expect(result.isSuccess).toBe(true);
     expect(result.value?.url).toBe('https://updated.com');
     expect(result.value?.shortCode).toBe('abc123');
+    expect(result.value?.id).toBe(updatedEntity.id);
+    expect(result.value?.accessCount).toBe(updatedEntity.accessCount);
+    expect(result.value?.createdAt).toEqual(updatedEntity.createdAt);
     expect(updateMock).toHaveBeenCalledWith({
       shortCode: 'abc123',
       url: 'https://updated.com',
