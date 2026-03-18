@@ -35,8 +35,7 @@ export class GetShortUrlStatsUseCase {
     if (!shortUrl) {
       return ResultUtils.fail(new ShortUrlNotFoundError(shortCode));
     }
-
-    // Pure read — does NOT increment accessCount (per ADR rule 1)
+    
     return ResultUtils.ok({
       id: shortUrl.id,
       url: shortUrl.url,

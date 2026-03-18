@@ -24,7 +24,7 @@ export async function bootstrap() {
     throw new Error('A configuração do app falhou ao carregar');
   }
 
-  // Global HTTP Shared Base (ADR-00-04, ADR-00-09)
+  // Global HTTP Shared Base
   app.useGlobalFilters(new AppExceptionFilter());
   app.useGlobalInterceptors(
     new RequestContextInterceptor(),
@@ -52,11 +52,13 @@ export async function bootstrap() {
   app.enableShutdownHooks();
 
   if (appConfig.enableSwagger) {
-    // Swagger setup
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('API de encurtamento de URL')
-      .setDescription('Documentação da API de encurtamento de URL')
-      .setVersion('1.0')
+      .setTitle('Short URL API')
+      .setDescription(
+        'API REST de encurtamento de URLs. Contratos públicos documentados conforme OpenAPI 3.0.',
+      )
+      .setVersion('1.0.0')
+      .addTag('short-url', 'Endpoints da feature de encurtamento de URL')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);

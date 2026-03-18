@@ -18,7 +18,10 @@ import {
   ApiParam,
   ApiBody,
   ApiResponse,
+  ApiExtraModels,
 } from '@nestjs/swagger';
+
+import { ApiErrorResponse } from '../../../../shared/http/contracts/api-error.contract';
 
 import { ZodValidationPipe } from '../../../../shared/http/pipes/zod-validation.pipe';
 
@@ -46,7 +49,20 @@ import { ShortUrlPresenter } from '../presenters/short-url.presenter';
 import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
 import { ShortCodeGenerationExhaustedError } from '../../domain/errors/short-code-generation-exhausted.error';
 
+const SHORT_CODE_PARAM = {
+  name: 'shortCode',
+  description: 'Identificador curto da URL (6 a 21 caracteres alfanuméricos)',
+  example: 'abc1234',
+  schema: {
+    type: 'string',
+    minLength: 6,
+    maxLength: 21,
+    pattern: '^[a-zA-Z0-9]+$',
+  },
+} as const;
+
 @ApiTags('short-url')
+@ApiExtraModels(ApiErrorResponse)
 @Controller()
 export class ShortenController {
   constructor(
@@ -61,11 +77,25 @@ export class ShortenController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Criar URL curta' })
   @ApiBody({ type: CreateShortUrlRequest })
-  @ApiResponse({ status: 201, type: ShortUrlResponse })
-  @ApiResponse({ status: 400, description: 'Payload inválido' })
+  @ApiResponse({
+    status: 201,
+    type: ShortUrlResponse,
+    description: 'Short URL criada com sucesso',
+  })
+  @ApiResponse({
+    status: 400,
+    type: ApiErrorResponse,
+    description: 'Bad Request - validação do payload falhou',
+  })
   @ApiResponse({
     status: 409,
-    description: 'Não foi possível gerar short code único',
+    type: ApiErrorResponse,
+    description: 'Conflict - não foi possível gerar short code único',
+  })
+  @ApiResponse({
+    status: 500,
+    type: ApiErrorResponse,
+    description: 'Internal Server Error - falha inesperada',
   })
   @UsePipes(new ZodValidationPipe(createShortUrlSchema))
   async create(
@@ -89,10 +119,27 @@ export class ShortenController {
   @Get('shorten/:shortCode')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obter URL original pelo short code' })
-  @ApiParam({ name: 'shortCode', type: String })
-  @ApiResponse({ status: 200, type: ShortUrlResponse })
-  @ApiResponse({ status: 400, description: 'Parâmetro inválido' })
-  @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
+  @ApiParam(SHORT_CODE_PARAM)
+  @ApiResponse({
+    status: 200,
+    type: ShortUrlResponse,
+    description: 'Short URL encontrada',
+  })
+  @ApiResponse({
+    status: 400,
+    type: ApiErrorResponse,
+    description: 'Bad Request - parâmetro shortCode inválido',
+  })
+  @ApiResponse({
+    status: 404,
+    type: ApiErrorResponse,
+    description: 'Not Found - short code inexistente',
+  })
+  @ApiResponse({
+    status: 500,
+    type: ApiErrorResponse,
+    description: 'Internal Server Error - falha inesperada',
+  })
   async findOne(
     @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
     shortCode: string,
@@ -115,15 +162,33 @@ export class ShortenController {
   @Put('shorten/:shortCode')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Atualizar URL original de um short code' })
-  @ApiParam({ name: 'shortCode', type: String })
+  @ApiParam(SHORT_CODE_PARAM)
   @ApiBody({ type: UpdateShortUrlRequest })
-  @ApiResponse({ status: 200, type: ShortUrlResponse })
-  @ApiResponse({ status: 400, description: 'Payload ou parâmetro inválido' })
-  @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
+  @ApiResponse({
+    status: 200,
+    type: ShortUrlResponse,
+    description: 'Short URL atualizada com sucesso',
+  })
+  @ApiResponse({
+    status: 400,
+    type: ApiErrorResponse,
+    description: 'Bad Request - payload ou parâmetro inválido',
+  })
+  @ApiResponse({
+    status: 404,
+    type: ApiErrorResponse,
+    description: 'Not Found - short code inexistente',
+  })
+  @ApiResponse({
+    status: 500,
+    type: ApiErrorResponse,
+    description: 'Internal Server Error - falha inesperada',
+  })
   async update(
     @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
     shortCode: string,
-    @Body(new ZodValidationPipe(updateShortUrlSchema)) body: UpdateShortUrlRequestDto,
+    @Body(new ZodValidationPipe(updateShortUrlSchema))
+    body: UpdateShortUrlRequestDto,
   ): Promise<ShortUrlResponse> {
     const result = await this.updateShortUrl.execute({
       shortCode,
@@ -146,10 +211,26 @@ export class ShortenController {
   @Delete('shorten/:shortCode')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Deletar um short code' })
-  @ApiParam({ name: 'shortCode', type: String })
-  @ApiResponse({ status: 204 })
-  @ApiResponse({ status: 400, description: 'Parâmetro inválido' })
-  @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
+  @ApiParam(SHORT_CODE_PARAM)
+  @ApiResponse({
+    status: 204,
+    description: 'No Content - short code removido com sucesso',
+  })
+  @ApiResponse({
+    status: 400,
+    type: ApiErrorResponse,
+    description: 'Bad Request - parâmetro shortCode inválido',
+  })
+  @ApiResponse({
+    status: 404,
+    type: ApiErrorResponse,
+    description: 'Not Found - short code inexistente',
+  })
+  @ApiResponse({
+    status: 500,
+    type: ApiErrorResponse,
+    description: 'Internal Server Error - falha inesperada',
+  })
   async remove(
     @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
     shortCode: string,
@@ -170,10 +251,27 @@ export class ShortenController {
   @Get('shorten/:shortCode/stats')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obter estatísticas de acesso de um short code' })
-  @ApiParam({ name: 'shortCode', type: String })
-  @ApiResponse({ status: 200, type: ShortUrlStatsResponse })
-  @ApiResponse({ status: 400, description: 'Parâmetro inválido' })
-  @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
+  @ApiParam(SHORT_CODE_PARAM)
+  @ApiResponse({
+    status: 200,
+    type: ShortUrlStatsResponse,
+    description: 'Estatísticas de acesso da short URL',
+  })
+  @ApiResponse({
+    status: 400,
+    type: ApiErrorResponse,
+    description: 'Bad Request - parâmetro shortCode inválido',
+  })
+  @ApiResponse({
+    status: 404,
+    type: ApiErrorResponse,
+    description: 'Not Found - short code inexistente',
+  })
+  @ApiResponse({
+    status: 500,
+    type: ApiErrorResponse,
+    description: 'Internal Server Error - falha inesperada',
+  })
   async stats(
     @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
     shortCode: string,

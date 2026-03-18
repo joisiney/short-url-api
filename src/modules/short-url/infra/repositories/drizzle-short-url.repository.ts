@@ -13,7 +13,7 @@ function isUniqueViolation(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) return false;
   const e = error as Record<string, unknown>;
   if (e.code === PG_UNIQUE_VIOLATION) return true;
-  const cause = e.cause as unknown;
+  const cause = e.cause;
   return (
     typeof cause === 'object' &&
     cause !== null &&

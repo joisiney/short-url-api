@@ -2,22 +2,21 @@ import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 
 import { AppExceptionFilter } from './app-exception.filter';
 
-function createArgumentsHostMock(partial: {
-  statusCode?: number;
-  responseBody?: unknown;
-  requestId?: string;
-  correlationId?: string;
-}) {
+type MockHost = ArgumentsHost & {
+  response: { status: jest.Mock };
+  status: jest.Mock;
+  json: jest.Mock;
+};
+
+function createArgumentsHostMock(): MockHost {
   const json = jest.fn().mockReturnThis();
   const status = jest.fn().mockReturnValue({ json });
 
-  const response = {
-    status,
-  };
+  const response = { status };
 
   const request = {
-    requestId: partial.requestId ?? 'req-123',
-    correlationId: partial.correlationId ?? 'corr-456',
+    requestId: 'req-123',
+    correlationId: 'corr-456',
   };
 
   const switchToHttp = () => ({
@@ -30,11 +29,7 @@ function createArgumentsHostMock(partial: {
     response,
     status,
     json,
-  } as unknown as ArgumentsHost & {
-    response: typeof response;
-    status: typeof status;
-    json: typeof json;
-  };
+  } as unknown as MockHost;
 }
 
 describe('AppExceptionFilter', () => {
@@ -49,23 +44,24 @@ describe('AppExceptionFilter', () => {
       HttpStatus.NOT_FOUND,
     );
 
-    const host = createArgumentsHostMock({});
+    const host = createArgumentsHostMock();
 
     filter.catch(exception, host);
 
     expect(host.response.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
-    const payload = (
-      host.response.status as jest.Mock
-    ).mock.calls[0][0] as number;
-    expect(payload).toBe(HttpStatus.NOT_FOUND);
 
-    const firstResult = (host.response.status as jest.Mock).mock.results[0];
-    const jsonArg = (firstResult?.value.json ?? jest.fn()) as jest.Mock;
-    const body = (jsonArg.mock.calls[0]?.[0] ?? {
+    const statusReturn = host.response.status.mock.results[0]?.value as
+      | { json: jest.Mock }
+      | undefined;
+    const jsonCalls = statusReturn?.json?.mock?.calls as
+      | [Record<string, unknown>][]
+      | undefined;
+    const body = (jsonCalls?.[0]?.[0] ?? {
       error: {},
     }) as { error: Record<string, unknown> };
 
     expect(body.error.code).toBe('SHORT_URL_NOT_FOUND');
+    expect(body.error.statusCode).toBe(HttpStatus.NOT_FOUND);
     expect(body.error.message).toBe('Short URL não encontrada');
     expect(body.error).toHaveProperty('timestamp');
     expect(body.error).toHaveProperty('requestId');
@@ -76,18 +72,22 @@ describe('AppExceptionFilter', () => {
   it('deve mapear HttpException simples usando STATUS_CODE_MAP quando sem code explícito', () => {
     const filter = new AppExceptionFilter();
     const exception = new HttpException('Bad request', HttpStatus.BAD_REQUEST);
-    const host = createArgumentsHostMock({});
+    const host = createArgumentsHostMock();
 
     filter.catch(exception, host);
 
-    const firstResult = (host.response.status as jest.Mock).mock.results[0];
-    const jsonArg = (firstResult?.value.json ?? jest.fn()) as jest.Mock;
-    const body = (jsonArg.mock.calls[0]?.[0] ?? {
+    const statusReturn = host.response.status.mock.results[0]?.value as
+      | { json: jest.Mock }
+      | undefined;
+    const jsonCalls = statusReturn?.json?.mock?.calls as
+      | [Record<string, unknown>][]
+      | undefined;
+    const body = (jsonCalls?.[0]?.[0] ?? {
       error: {},
     }) as { error: Record<string, unknown> };
 
     expect(body.error.code).toBe('BAD_REQUEST');
+    expect(body.error.statusCode).toBe(HttpStatus.BAD_REQUEST);
     expect(body.error.message).toBe('Bad request');
   });
 });
-

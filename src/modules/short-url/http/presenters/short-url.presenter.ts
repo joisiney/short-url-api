@@ -9,15 +9,10 @@ export class ShortUrlPresenter {
   static toResponse(
     data: CreateShortUrlOutput | GetShortUrlOutput | UpdateShortUrlOutput,
   ): ShortUrlResponse {
-    const accessCount =
-      'accessCount' in data
-        ? (((data as Record<string, unknown>).accessCount as number) ?? 0)
-        : 0;
     return {
       id: data.id,
       url: data.url,
       shortCode: data.shortCode,
-      accessCount,
       createdAt: data.createdAt.toISOString(),
       updatedAt: data.updatedAt.toISOString(),
     };

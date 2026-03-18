@@ -16,20 +16,26 @@ import { ShortCodeGenerationExhaustedError } from '../../domain/errors/short-cod
 
 describe('ShortenController', () => {
   function makeSut() {
+    const createExecute = jest.fn();
+    const getExecute = jest.fn();
+    const updateExecute = jest.fn();
+    const deleteExecute = jest.fn();
+    const statsExecute = jest.fn();
+
     const createShortUrl = {
-      execute: jest.fn(),
+      execute: createExecute,
     } as unknown as CreateShortUrlUseCase;
     const getShortUrl = {
-      execute: jest.fn(),
+      execute: getExecute,
     } as unknown as GetShortUrlUseCase;
     const updateShortUrl = {
-      execute: jest.fn(),
+      execute: updateExecute,
     } as unknown as UpdateShortUrlUseCase;
     const deleteShortUrl = {
-      execute: jest.fn(),
+      execute: deleteExecute,
     } as unknown as DeleteShortUrlUseCase;
     const getShortUrlStats = {
-      execute: jest.fn(),
+      execute: statsExecute,
     } as unknown as GetShortUrlStatsUseCase;
 
     const controller = new ShortenController(
@@ -47,6 +53,11 @@ describe('ShortenController', () => {
       updateShortUrl,
       deleteShortUrl,
       getShortUrlStats,
+      createExecute,
+      getExecute,
+      updateExecute,
+      deleteExecute,
+      statsExecute,
     };
   }
 
@@ -60,30 +71,25 @@ describe('ShortenController', () => {
   };
 
   it('deve_retornar_short_url_quando_create_sucesso', async () => {
-    const { controller, createShortUrl } = makeSut();
-    (createShortUrl.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.ok(baseOutput),
-    );
+    const { controller, createExecute } = makeSut();
+    createExecute.mockResolvedValue(ResultUtils.ok(baseOutput));
 
     const result = await controller.create({ url: 'https://example.com' });
 
-    expect(createShortUrl.execute).toHaveBeenCalledWith({
+    expect(createExecute).toHaveBeenCalledWith({
       url: 'https://example.com',
     });
     expect(result).toMatchObject({
       id: baseOutput.id,
       url: baseOutput.url,
       shortCode: baseOutput.shortCode,
-      accessCount: 0,
     });
   });
 
   it('deve_retornar_erro_conflict_quando_create_exaurir_tentativas', async () => {
-    const { controller, createShortUrl } = makeSut();
+    const { controller, createExecute } = makeSut();
     const domainError = new ShortCodeGenerationExhaustedError(5);
-    (createShortUrl.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.fail(domainError),
-    );
+    createExecute.mockResolvedValue(ResultUtils.fail(domainError));
 
     await expect(
       controller.create({ url: 'https://example.com' }),
@@ -91,12 +97,9 @@ describe('ShortenController', () => {
   });
 
   it('deve_retornar_erro_not_found_quando_findOne_nao_encontrar', async () => {
-    const { controller, getShortUrl } = makeSut();
+    const { controller, getExecute } = makeSut();
     const domainError = new ShortUrlNotFoundError('missing');
-
-    (getShortUrl.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.fail(domainError),
-    );
+    getExecute.mockResolvedValue(ResultUtils.fail(domainError));
 
     await expect(controller.findOne('missing')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -104,16 +107,14 @@ describe('ShortenController', () => {
   });
 
   it('deve_retornar_short_url_quando_update_sucesso', async () => {
-    const { controller, updateShortUrl } = makeSut();
-    (updateShortUrl.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.ok(baseOutput),
-    );
+    const { controller, updateExecute } = makeSut();
+    updateExecute.mockResolvedValue(ResultUtils.ok(baseOutput));
 
     const result = await controller.update('abc123', {
       url: 'https://example.com/updated',
     });
 
-    expect(updateShortUrl.execute).toHaveBeenCalledWith({
+    expect(updateExecute).toHaveBeenCalledWith({
       shortCode: 'abc123',
       url: 'https://example.com/updated',
     });
@@ -121,11 +122,9 @@ describe('ShortenController', () => {
   });
 
   it('deve_retornar_erro_not_found_quando_update_nao_encontrar', async () => {
-    const { controller, updateShortUrl } = makeSut();
+    const { controller, updateExecute } = makeSut();
     const domainError = new ShortUrlNotFoundError('missing');
-    (updateShortUrl.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.fail(domainError),
-    );
+    updateExecute.mockResolvedValue(ResultUtils.fail(domainError));
 
     await expect(
       controller.update('missing', { url: 'https://any.com' }),
@@ -133,24 +132,22 @@ describe('ShortenController', () => {
   });
 
   it('deve_executar_delete_quando_remove_sucesso', async () => {
-    const { controller, deleteShortUrl } = makeSut();
-    (deleteShortUrl.execute as jest.Mock).mockResolvedValue(
+    const { controller, deleteExecute } = makeSut();
+    deleteExecute.mockResolvedValue(
       ResultUtils.ok<void, never>(undefined as never),
     );
 
     await controller.remove('abc123');
 
-    expect(deleteShortUrl.execute).toHaveBeenCalledWith({
+    expect(deleteExecute).toHaveBeenCalledWith({
       shortCode: 'abc123',
     });
   });
 
   it('deve_retornar_erro_not_found_quando_remove_nao_encontrar', async () => {
-    const { controller, deleteShortUrl } = makeSut();
+    const { controller, deleteExecute } = makeSut();
     const domainError = new ShortUrlNotFoundError('missing');
-    (deleteShortUrl.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.fail(domainError),
-    );
+    deleteExecute.mockResolvedValue(ResultUtils.fail(domainError));
 
     await expect(controller.remove('missing')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -158,29 +155,25 @@ describe('ShortenController', () => {
   });
 
   it('deve_retornar_stats_quando_stats_sucesso', async () => {
-    const { controller, getShortUrlStats } = makeSut();
+    const { controller, statsExecute } = makeSut();
     const statsOutput = {
       ...baseOutput,
       accessCount: 10,
     };
-    (getShortUrlStats.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.ok(statsOutput),
-    );
+    statsExecute.mockResolvedValue(ResultUtils.ok(statsOutput));
 
     const result = await controller.stats('abc123');
 
-    expect(getShortUrlStats.execute).toHaveBeenCalledWith({
+    expect(statsExecute).toHaveBeenCalledWith({
       shortCode: 'abc123',
     });
     expect(result.accessCount).toBe(10);
   });
 
   it('deve_retornar_erro_not_found_quando_stats_nao_encontrar', async () => {
-    const { controller, getShortUrlStats } = makeSut();
+    const { controller, statsExecute } = makeSut();
     const domainError = new ShortUrlNotFoundError('missing');
-    (getShortUrlStats.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.fail(domainError),
-    );
+    statsExecute.mockResolvedValue(ResultUtils.fail(domainError));
 
     await expect(controller.stats('missing')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -188,14 +181,12 @@ describe('ShortenController', () => {
   });
 
   it('deve_retornar_short_url_quando_findOne_sucesso', async () => {
-    const { controller, getShortUrl } = makeSut();
-    (getShortUrl.execute as jest.Mock).mockResolvedValue(
-      ResultUtils.ok(baseOutput),
-    );
+    const { controller, getExecute } = makeSut();
+    getExecute.mockResolvedValue(ResultUtils.ok(baseOutput));
 
     const result = await controller.findOne('abc123');
 
-    expect(getShortUrl.execute).toHaveBeenCalledWith({ shortCode: 'abc123' });
+    expect(getExecute).toHaveBeenCalledWith({ shortCode: 'abc123' });
     expect(result).toMatchObject({
       id: baseOutput.id,
       url: baseOutput.url,
@@ -203,4 +194,3 @@ describe('ShortenController', () => {
     });
   });
 });
-

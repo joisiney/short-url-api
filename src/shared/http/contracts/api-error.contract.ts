@@ -6,6 +6,12 @@ export class ApiError {
   code!: string;
 
   @ApiProperty({
+    description: 'Código HTTP do status',
+    example: 400,
+  })
+  statusCode!: number;
+
+  @ApiProperty({
     description: 'Mensagem do erro',
     example: 'Request validation failed',
   })

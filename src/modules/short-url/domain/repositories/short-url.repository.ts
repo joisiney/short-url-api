@@ -6,8 +6,7 @@ export interface ShortUrlRepository {
   create(shortUrl: ShortUrl): Promise<void>;
   findByShortCode(shortCode: string): Promise<ShortUrl | null>;
   incrementAccessCount(shortCode: string): Promise<void>;
-
-  // ADR-00-08 Specific / Suggested in Section 21
+  
   updateUrlByShortCode(input: {
     shortCode: string;
     url: string;

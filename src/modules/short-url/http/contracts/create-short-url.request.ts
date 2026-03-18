@@ -10,7 +10,8 @@ export type CreateShortUrlRequestDto = z.infer<typeof createShortUrlSchema>;
 export class CreateShortUrlRequest {
   @ApiProperty({
     example: 'https://www.example.com/some/very/long/path',
-    description: 'A URL original a ser encurtada',
+    description: 'URL original a ser encurtada (formato URI válido)',
+    format: 'uri',
   })
   url!: string;
 }

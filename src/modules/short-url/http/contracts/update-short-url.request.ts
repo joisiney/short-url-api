@@ -10,7 +10,9 @@ export type UpdateShortUrlRequestDto = z.infer<typeof updateShortUrlSchema>;
 export class UpdateShortUrlRequest {
   @ApiProperty({
     example: 'https://www.example.com/new/destination',
-    description: 'A nova URL original a ser associada ao short code',
+    description:
+      'Nova URL original a ser associada ao short code (formato URI válido)',
+    format: 'uri',
   })
   url!: string;
 }

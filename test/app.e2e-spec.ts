@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { json } from 'express';
 import helmet from 'helmet';
 import request from 'supertest';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from '../src/app/app.module';
 import { AppExceptionFilter } from '../src/shared/http/filters/app-exception.filter';
@@ -13,7 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { createTestDb } from './helpers/db-test.helper';
 
 describe('API HTTP (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let testDb: ReturnType<typeof createTestDb>;
   const prefix = '/api';
 
@@ -25,7 +26,7 @@ describe('API HTTP (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
     const configService = app.get(ConfigService);
 
     app.useGlobalFilters(new AppExceptionFilter());
@@ -39,6 +40,14 @@ describe('API HTTP (e2e)', () => {
     app.enableCors({ origin: '*' });
     app.use(json({ limit: '100kb' }));
     app.setGlobalPrefix(prefix);
+
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Short URL API')
+      .setVersion('1.0.0')
+      .addTag('short-url')
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup(`${prefix}/docs`, app, document);
 
     await app.init();
   });
@@ -61,7 +70,6 @@ describe('API HTTP (e2e)', () => {
 
       expect(res.body).toMatchObject({
         url: 'https://example.com',
-        accessCount: 0,
       });
       expect(res.body.id).toBeDefined();
       expect(res.body.shortCode).toBeDefined();
@@ -98,7 +106,6 @@ describe('API HTTP (e2e)', () => {
         url: 'https://example.com',
         shortCode,
       });
-      expect(res.body.accessCount).toBe(1);
     });
 
     it('deve retornar 404 quando shortCode nao existe', async () => {
@@ -157,6 +164,26 @@ describe('API HTTP (e2e)', () => {
       await request(app.getHttpServer())
         .delete(`${prefix}/shorten/naoexiste`)
         .expect(404);
+    });
+  });
+
+  describe('Swagger/OpenAPI', () => {
+    it('deve expor documentacao com endpoints da feature short-url', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`${prefix}/docs-json`)
+        .expect(200);
+
+      const paths = res.body.paths as Record<string, unknown>;
+      expect(paths['/api/shorten']).toBeDefined();
+      expect(paths['/api/shorten/{shortCode}']).toBeDefined();
+      expect(paths['/api/shorten/{shortCode}/stats']).toBeDefined();
+
+      expect(res.body.info?.version).toBe('1.0.0');
+      expect(res.body.tags).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'short-url' }),
+        ]),
+      );
     });
   });
 
