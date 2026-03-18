@@ -24,6 +24,8 @@ function makeRepository(
     update: jest.fn(),
     delete: jest.fn(),
     incrementAccessCount: jest.fn().mockResolvedValue(undefined),
+    updateUrlByShortCode: jest.fn(),
+    deleteByShortCode: jest.fn(),
     ...overrides,
   };
 }

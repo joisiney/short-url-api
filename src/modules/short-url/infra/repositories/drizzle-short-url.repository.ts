@@ -7,7 +7,6 @@ import { eq, sql } from 'drizzle-orm';
 import { ShortUrlPersistenceMapper } from '../mappers/short-url.persistence-mapper';
 import { ShortCodeConflictError } from '../../domain/errors/short-code-conflict.error';
 
-// PostgreSQL unique-violation error code
 const PG_UNIQUE_VIOLATION = '23505';
 
 function isUniqueViolation(error: unknown): boolean {
@@ -75,5 +74,36 @@ export class DrizzleShortUrlRepository implements ShortUrlRepository {
       })
       .where(eq(shortUrls.shortCode, shortCode))
       .execute();
+  }
+
+  // --- Specialized Implementations for ADR-00-08 ---
+
+  async updateUrlByShortCode(input: {
+    shortCode: string;
+    url: string;
+  }): Promise<ShortUrl | null> {
+    const [updatedRecord] = await this.db
+      .update(shortUrls)
+      .set({
+        url: input.url,
+        updatedAt: new Date(),
+      })
+      .where(eq(shortUrls.shortCode, input.shortCode))
+      .returning()
+      .execute();
+
+    if (!updatedRecord) return null;
+
+    return ShortUrlPersistenceMapper.toDomain(updatedRecord);
+  }
+
+  async deleteByShortCode(shortCode: string): Promise<boolean> {
+    const [deletedRecord] = await this.db
+      .delete(shortUrls)
+      .where(eq(shortUrls.shortCode, shortCode))
+      .returning({ id: shortUrls.id })
+      .execute();
+
+    return !!deletedRecord;
   }
 }

@@ -8,4 +8,11 @@ export interface ShortUrlRepository {
   update(shortUrl: ShortUrl): Promise<void>;
   delete(shortCode: string): Promise<void>;
   incrementAccessCount(shortCode: string): Promise<void>;
+
+  // ADR-00-08 Specific / Suggested in Section 21
+  updateUrlByShortCode(input: {
+    shortCode: string;
+    url: string;
+  }): Promise<ShortUrl | null>;
+  deleteByShortCode(shortCode: string): Promise<boolean>;
 }

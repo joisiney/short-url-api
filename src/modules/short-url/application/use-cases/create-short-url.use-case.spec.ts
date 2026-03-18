@@ -19,6 +19,8 @@ function makeRepository(
     update: jest.fn(),
     delete: jest.fn(),
     incrementAccessCount: jest.fn(),
+    updateUrlByShortCode: jest.fn(),
+    deleteByShortCode: jest.fn(),
     ...overrides,
   };
 }

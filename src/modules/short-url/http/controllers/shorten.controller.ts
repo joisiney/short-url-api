@@ -38,6 +38,7 @@ import {
   updateShortUrlSchema,
 } from '../contracts/update-short-url.request';
 import type { UpdateShortUrlRequestDto } from '../contracts/update-short-url.request';
+import { shortCodeSchema } from '../contracts/short-code.schema';
 import { ShortUrlResponse } from '../contracts/short-url.response';
 import { ShortUrlStatsResponse } from '../contracts/short-url-stats.response';
 import { ShortUrlPresenter } from '../presenters/short-url.presenter';
@@ -89,9 +90,11 @@ export class ShortenController {
   @ApiOperation({ summary: 'Obter URL original pelo short code' })
   @ApiParam({ name: 'shortCode', type: String })
   @ApiResponse({ status: 200, type: ShortUrlResponse })
+  @ApiResponse({ status: 400, description: 'Parâmetro inválido' })
   @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
   async findOne(
-    @Param('shortCode') shortCode: string,
+    @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
+    shortCode: string,
   ): Promise<ShortUrlResponse> {
     try {
       const result = await this.getShortUrl.execute({ shortCode });
@@ -113,13 +116,29 @@ export class ShortenController {
   @ApiParam({ name: 'shortCode', type: String })
   @ApiBody({ type: UpdateShortUrlRequest })
   @ApiResponse({ status: 200, type: ShortUrlResponse })
+  @ApiResponse({ status: 400, description: 'Payload ou parâmetro inválido' })
+  @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
   @UsePipes(new ZodValidationPipe(updateShortUrlSchema))
-  update(
-    @Param('shortCode') shortCode: string,
+  async update(
+    @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
+    shortCode: string,
     @Body() body: UpdateShortUrlRequestDto,
-  ): ShortUrlResponse {
-    const result = this.updateShortUrl.execute(shortCode, body.url);
-    return ShortUrlPresenter.toResponse(result);
+  ): Promise<ShortUrlResponse> {
+    try {
+      const result = await this.updateShortUrl.execute({
+        shortCode,
+        url: body.url,
+      });
+      return ShortUrlPresenter.toResponse(result);
+    } catch (error) {
+      if (error instanceof ShortUrlNotFoundError) {
+        throw new NotFoundException({
+          code: 'SHORT_URL_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
 
   @Delete('shorten/:shortCode')
@@ -127,8 +146,23 @@ export class ShortenController {
   @ApiOperation({ summary: 'Deletar um short code' })
   @ApiParam({ name: 'shortCode', type: String })
   @ApiResponse({ status: 204 })
-  remove(@Param('shortCode') shortCode: string): void {
-    this.deleteShortUrl.execute(shortCode);
+  @ApiResponse({ status: 400, description: 'Parâmetro inválido' })
+  @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
+  async remove(
+    @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
+    shortCode: string,
+  ): Promise<void> {
+    try {
+      await this.deleteShortUrl.execute({ shortCode });
+    } catch (error) {
+      if (error instanceof ShortUrlNotFoundError) {
+        throw new NotFoundException({
+          code: 'SHORT_URL_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
 
   @Get('shorten/:shortCode/stats')
@@ -136,8 +170,23 @@ export class ShortenController {
   @ApiOperation({ summary: 'Obter estatísticas de acesso de um short code' })
   @ApiParam({ name: 'shortCode', type: String })
   @ApiResponse({ status: 200, type: ShortUrlStatsResponse })
-  stats(@Param('shortCode') shortCode: string): ShortUrlStatsResponse {
-    const result = this.getShortUrlStats.execute(shortCode);
-    return ShortUrlPresenter.toStatsResponse(result);
+  @ApiResponse({ status: 400, description: 'Parâmetro inválido' })
+  @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
+  async stats(
+    @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
+    shortCode: string,
+  ): Promise<ShortUrlStatsResponse> {
+    try {
+      const result = await this.getShortUrlStats.execute({ shortCode });
+      return ShortUrlPresenter.toStatsResponse(result);
+    } catch (error) {
+      if (error instanceof ShortUrlNotFoundError) {
+        throw new NotFoundException({
+          code: 'SHORT_URL_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
 }
