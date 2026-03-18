@@ -62,3 +62,15 @@ docker compose down
 
 **Observação:**
 Novos ADRs detalharão banco, domínio e infraestrutura. Atualmente o repositório encontra-se na fase de Bootstrap Inicial.
+
+## Banco de Dados e Migrations
+
+A camada de dados utiliza Drizzle ORM. Quando houver alterações de schema, ou na necessidade de aplicar as migrações criadas para o banco, utilize os seguintes comandos:
+
+```bash
+# Gerar uma nova migration baseada nas alterações feitas no schema
+npm run db:generate
+
+# Aplicar as migrations pendentes no banco de dados
+npm run db:migrate
+```
