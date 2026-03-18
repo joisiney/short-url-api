@@ -22,27 +22,51 @@ export class LoggingInterceptor implements NestInterceptor {
     const correlationId = request.correlationId || '';
     const method = request.method;
     const url = request.url;
+    const userAgent = request.headers['user-agent'] || '';
     const now = Date.now();
 
     return next.handle().pipe(
       tap({
         next: () => {
-          const delay = Date.now() - now;
-          this.logger.log(
-            `[Req: ${requestId}] [Corr: ${correlationId}] ${method} ${url} ${response.statusCode} - ${delay}ms`,
-          );
+          const durationMs = Date.now() - now;
+          const payload = {
+            timestamp: new Date().toISOString(),
+            level: 'info',
+            context: 'HTTP',
+            message: 'Request completed',
+            requestId,
+            correlationId,
+            method,
+            path: url,
+            statusCode: response.statusCode,
+            durationMs,
+            userAgent,
+          };
+          this.logger.log(JSON.stringify(payload));
         },
         error: (error: unknown) => {
-          const delay = Date.now() - now;
+          const durationMs = Date.now() - now;
           const status =
             error && typeof error === 'object' && 'status' in error
-              ? Number(error.status)
+              ? Number((error as { status: number }).status)
               : 500;
           const message =
             error instanceof Error ? error.message : String(error);
-          this.logger.error(
-            `[Req: ${requestId}] [Corr: ${correlationId}] ${method} ${url} ${status} - ${delay}ms - ${message}`,
-          );
+          const payload = {
+            timestamp: new Date().toISOString(),
+            level: 'error',
+            context: 'HTTP',
+            message: 'Request failed',
+            requestId,
+            correlationId,
+            method,
+            path: url,
+            statusCode: status,
+            durationMs,
+            userAgent,
+            errorMessage: message,
+          };
+          this.logger.error(JSON.stringify(payload));
         },
       }),
     );

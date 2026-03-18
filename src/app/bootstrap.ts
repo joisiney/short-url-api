@@ -3,6 +3,8 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
+import { json } from 'express';
 
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppConfig } from '../config/app.config';
@@ -22,16 +24,27 @@ export async function bootstrap() {
     throw new Error('A configuração do app falhou ao carregar');
   }
 
-  // Global HTTP Shared Base (ADR-00-04)
+  // Global HTTP Shared Base (ADR-00-04, ADR-00-09)
   app.useGlobalFilters(new AppExceptionFilter());
   app.useGlobalInterceptors(
     new RequestContextInterceptor(),
     new LoggingInterceptor(),
-    new TimeoutInterceptor(),
+    new TimeoutInterceptor(configService),
   );
 
   // Disable x-powered-by
   app.disable('x-powered-by');
+
+  // Hardening HTTP com Helmet
+  app.use(helmet());
+
+  // CORS restritivo por ambiente
+  app.enableCors({
+    origin: appConfig.corsOrigin,
+  });
+
+  // Limite de payload
+  app.use(json({ limit: appConfig.bodyLimit }));
 
   // Global API prefix
   app.setGlobalPrefix(appConfig.globalPrefix);

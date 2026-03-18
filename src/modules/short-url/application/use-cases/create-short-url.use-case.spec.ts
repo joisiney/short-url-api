@@ -57,7 +57,9 @@ describe('CreateShortUrlUseCase', () => {
     const result = await useCase.execute({ url: 'https://example.com/path' });
 
     expect(result.isSuccess).toBe(true);
-    expect(result.value?.createdAt.getTime()).toBe(result.value?.updatedAt.getTime());
+    expect(result.value?.createdAt.getTime()).toBe(
+      result.value?.updatedAt.getTime(),
+    );
   });
 
   it('deve fazer retry quando houver colisão de shortCode', async () => {

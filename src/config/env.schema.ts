@@ -55,6 +55,8 @@ export const envSchema = z
       })
       .default('100kb'),
 
+    APP_HTTP_TIMEOUT_MS: milliseconds.default(5000),
+
     APP_ENABLE_SWAGGER: booleanString,
 
     // ── Database ─────────────────────────────────────────────────────────────

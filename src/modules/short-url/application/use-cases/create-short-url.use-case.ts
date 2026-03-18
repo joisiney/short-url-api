@@ -69,6 +69,8 @@ export class CreateShortUrlUseCase {
       }
     }
 
-    return ResultUtils.fail(new ShortCodeGenerationExhaustedError(MAX_ATTEMPTS));
+    return ResultUtils.fail(
+      new ShortCodeGenerationExhaustedError(MAX_ATTEMPTS),
+    );
   }
 }
