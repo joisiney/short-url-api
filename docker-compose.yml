@@ -1,4 +1,4 @@
-name: "short-url"
+name: short-url
 
 services:
   api:
@@ -9,7 +9,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./:/usr/src/app
+      - .:/usr/src/app
       - /usr/src/app/node_modules
     env_file:
       - .env
@@ -23,9 +23,9 @@ services:
     image: postgres:16-alpine
     container_name: short-url-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-short-url}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-short-url}
     ports:
       - "5432:5432"
     volumes:
