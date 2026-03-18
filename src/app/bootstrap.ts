@@ -7,6 +7,11 @@ import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppConfig } from '../config/app.config';
 
+import { AppExceptionFilter } from '../shared/http/filters/app-exception.filter';
+import { RequestContextInterceptor } from '../shared/http/interceptors/request-context.interceptor';
+import { LoggingInterceptor } from '../shared/http/interceptors/logging.interceptor';
+import { TimeoutInterceptor } from '../shared/http/interceptors/timeout.interceptor';
+
 export async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
@@ -16,6 +21,14 @@ export async function bootstrap() {
   if (!appConfig) {
     throw new Error('A configuração do app falhou ao carregar');
   }
+
+  // Global HTTP Shared Base (ADR-00-04)
+  app.useGlobalFilters(new AppExceptionFilter());
+  app.useGlobalInterceptors(
+    new RequestContextInterceptor(),
+    new LoggingInterceptor(),
+    new TimeoutInterceptor(),
+  );
 
   // Disable x-powered-by
   app.disable('x-powered-by');
