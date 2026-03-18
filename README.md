@@ -1,6 +1,6 @@
-<div align="center">
-  <img src="https://res.cloudinary.com/dmoi0mmuj/image/upload/c_pad,w_800/v1773872265/Gemini_Generated_Image_r1wqexr1wqexr1wq_r7xz8y.png" alt="Short URL API Banner" />
-</div>
+
+  <img src="https://res.cloudinary.com/dmoi0mmuj/image/upload/c_pad,w_900/v1773872265/Gemini_Generated_Image_r1wqexr1wqexr1wq_r7xz8y.png" alt="Short URL API Banner" />
+
 
 <br/>
 
