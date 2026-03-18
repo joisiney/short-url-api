@@ -27,7 +27,7 @@ Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto 
 - Deletar short URL
 - Consultar estatísticas de acesso
 
-## Arquitetura e Soluções (C4 Model)
+## Arquitetura e Soluções
 
 O projeto foi desenhado buscando uma forte consistência estrutural. Abaixo detalhamos a modelagem através da visão de Contexto, Container, Componentes e Fluxo Interno.
 
