@@ -9,6 +9,8 @@ import {
   HttpCode,
   HttpStatus,
   UsePipes,
+  ConflictException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -40,6 +42,9 @@ import { ShortUrlResponse } from '../contracts/short-url.response';
 import { ShortUrlStatsResponse } from '../contracts/short-url-stats.response';
 import { ShortUrlPresenter } from '../presenters/short-url.presenter';
 
+import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+import { ShortCodeGenerationExhaustedError } from '../../domain/errors/short-code-generation-exhausted.error';
+
 @ApiTags('short-url')
 @Controller()
 export class ShortenController {
@@ -49,30 +54,60 @@ export class ShortenController {
     private readonly updateShortUrl: UpdateShortUrlUseCase,
     private readonly deleteShortUrl: DeleteShortUrlUseCase,
     private readonly getShortUrlStats: GetShortUrlStatsUseCase,
-  ) { }
+  ) {}
 
   @Post('shorten')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Criar URL curta' })
   @ApiBody({ type: CreateShortUrlRequest })
   @ApiResponse({ status: 201, type: ShortUrlResponse })
+  @ApiResponse({ status: 400, description: 'Payload inválido' })
+  @ApiResponse({
+    status: 409,
+    description: 'Não foi possível gerar short code único',
+  })
   @UsePipes(new ZodValidationPipe(createShortUrlSchema))
-  create(@Body() body: CreateShortUrlRequestDto): ShortUrlResponse {
-    const result = this.createShortUrl.execute(body.url);
-    return ShortUrlPresenter.toResponse(result);
+  async create(
+    @Body() body: CreateShortUrlRequestDto,
+  ): Promise<ShortUrlResponse> {
+    try {
+      const result = await this.createShortUrl.execute({ url: body.url });
+      return ShortUrlPresenter.toResponse(result);
+    } catch (error) {
+      if (error instanceof ShortCodeGenerationExhaustedError) {
+        throw new ConflictException({
+          code: 'SHORT_CODE_GENERATION_EXHAUSTED',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
 
-  @Get(':shortCode')
+  @Get('shorten/:shortCode')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obter URL original pelo short code' })
   @ApiParam({ name: 'shortCode', type: String })
   @ApiResponse({ status: 200, type: ShortUrlResponse })
-  findOne(@Param('shortCode') shortCode: string): ShortUrlResponse {
-    const result = this.getShortUrl.execute(shortCode);
-    return ShortUrlPresenter.toResponse(result);
+  @ApiResponse({ status: 404, description: 'Short URL não encontrada' })
+  async findOne(
+    @Param('shortCode') shortCode: string,
+  ): Promise<ShortUrlResponse> {
+    try {
+      const result = await this.getShortUrl.execute({ shortCode });
+      return ShortUrlPresenter.toResponse(result);
+    } catch (error) {
+      if (error instanceof ShortUrlNotFoundError) {
+        throw new NotFoundException({
+          code: 'SHORT_URL_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
 
-  @Put(':shortCode')
+  @Put('shorten/:shortCode')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Atualizar URL original de um short code' })
   @ApiParam({ name: 'shortCode', type: String })
@@ -87,7 +122,7 @@ export class ShortenController {
     return ShortUrlPresenter.toResponse(result);
   }
 
-  @Delete(':shortCode')
+  @Delete('shorten/:shortCode')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Deletar um short code' })
   @ApiParam({ name: 'shortCode', type: String })
@@ -96,7 +131,7 @@ export class ShortenController {
     this.deleteShortUrl.execute(shortCode);
   }
 
-  @Get(':shortCode/stats')
+  @Get('shorten/:shortCode/stats')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obter estatísticas de acesso de um short code' })
   @ApiParam({ name: 'shortCode', type: String })

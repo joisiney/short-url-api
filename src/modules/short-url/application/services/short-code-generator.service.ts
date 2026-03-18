@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { customAlphabet } from 'nanoid';
 
-const ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-const DEFAULT_LENGTH = 10;
+const ALPHABET =
+  'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const DEFAULT_LENGTH = 6;
 const MIN_LENGTH = 6;
 const MAX_LENGTH = 21;
 
