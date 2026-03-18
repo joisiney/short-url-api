@@ -1,76 +1,183 @@
 # Short URL API
 
-## Objetivo do projeto
-Este projeto implementa uma API REST de encurtamento de URLs, com operações de criação, consulta, atualização, remoção e leitura de estatísticas. O foco é uma arquitetura orientada por domínio/feature, alta qualidade de código com tipagem estrita, além de foco em escalabilidade e previsibilidade no desenvolvimento.
+API REST de encurtamento de URLs. Permite criar, consultar, atualizar e remover URLs curtas, além de consultar estatísticas de acesso. Arquitetura orientada por domínio, tipagem estrita e validação com Zod.
 
-## Stack principal
-- Node.js com TypeScript Estrito
+## Stack
+
+- Node.js 20+
+- TypeScript (strict mode)
 - NestJS
-- PostgreSQL com Drizzle ORM
-- Zod para validação
-- Swagger/OpenAPI para documentação completa
-- Docker Compose para infraestrutura local
+- PostgreSQL
+- Drizzle ORM
+- Zod
+- Swagger/OpenAPI
+- Docker Compose
+- Redis
 
-## Pré-requisitos
-- Node.js (>= 20.x)
-- npm ou yarn
-- Docker e Docker Compose
+## Funcionalidades
 
-## Comandos básicos
+- Criar short URL
+- Obter URL original por short code
+- Atualizar short URL
+- Deletar short URL
+- Consultar estatísticas de acesso
 
-```bash
-# Instalar dependências
-npm install
+## Estrutura do projeto
 
-# Rodar em modo de desenvolvimento
-npm run start:dev
-
-# Rodar build
-npm run build
-
-# Executar formatação
-npm run format
-
-# Executar lint
-npm run lint
-
-# Checagem de tipagem
-npm run typecheck
+```
+src/
+  modules/short-url/     # Domínio short-url
+    domain/              # Entidades, value objects, erros
+    application/         # Use cases, serviços de aplicação
+    infra/               # Repositórios (Drizzle)
+    http/                # Controller, contracts, presenter
+  shared/                # Base HTTP, contratos, pipes, interceptors
+  config/                # Configuração e validação de env
+  infra/                 # Database, migrations
 ```
 
-## Como rodar localmente com Docker Compose
+Organização por feature/domínio. Regras de negócio nos use cases; controller apenas orquestra. Acesso a dados via repositório.
 
-A forma recomendada de rodar o projeto localmente é utilizando o Docker Compose, que configurará automaticamente a API, o banco de dados PostgreSQL e o Redis.
+## Pré-requisitos
 
-1. Clone o repositório.
-2. Certifique-se de que as portas `3000`, `5432` e `6379` estão livres.
-3. Copie o arquivo de exemplo de variáveis de ambiente:
+- Docker e Docker Compose
+- Node.js 20+ (para rodar fora dos containers)
+- npm
+
+## Configuração de environment
+
+1. Copie o arquivo de exemplo:
    ```bash
    cp .env.example .env
    ```
-4. Suba a infraestrutura local:
+2. Ajuste valores conforme necessário. Variáveis obrigatórias: `DB_*`, `REDIS_*`, `APP_*`. O boot falha se env estiver inválida.
+3. Para testes: existe `.env.test`; testes de integração e e2e usam esse arquivo automaticamente.
+
+## Como subir localmente
+
+1. Copie o env:
+   ```bash
+   cp .env.example .env
+   ```
+2. Instale dependências (necessário para migrations e comandos locais):
+   ```bash
+   npm install
+   ```
+3. Suba a infraestrutura:
    ```bash
    docker compose up -d
    ```
-5. O container da API suporta hot reload através de mapeamento de volume. Qualquer alteração no código refletirá automaticamente.
-6. Acesse a documentação Swagger em http://localhost:3000/api/docs.
+4. Aplique as migrations:
+   ```bash
+   npm run db:migrate
+   ```
+5. A API sobe no container com hot reload. Swagger em http://localhost:3000/api/docs.
 
-Para derrubar a infraestrutura local:
-```bash
-docker compose down
-```
-
-**Observação:**
-Novos ADRs detalharão banco, domínio e infraestrutura. Atualmente o repositório encontra-se na fase de Bootstrap Inicial.
-
-## Banco de Dados e Migrations
-
-A camada de dados utiliza Drizzle ORM. Quando houver alterações de schema, ou na necessidade de aplicar as migrações criadas para o banco, utilize os seguintes comandos:
+Para rodar a API fora do container (com postgres e Redis já no ar via Docker):
 
 ```bash
-# Gerar uma nova migration baseada nas alterações feitas no schema
-npm run db:generate
-
-# Aplicar as migrations pendentes no banco de dados
+npm install
 npm run db:migrate
+npm run start:dev
 ```
+
+## Comandos úteis
+
+| Comando | Descrição |
+|---------|-----------|
+| `docker compose up -d` | Sobe ambiente (api, postgres, redis) |
+| `docker compose down` | Derruba ambiente |
+| `npm run start:dev` | App em modo dev (watch) |
+| `npm run build` | Build de produção |
+| `npm run start:prod` | Executa build (node dist) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | Checagem de tipos (tsc --noEmit) |
+| `npm run test` | Testes unitários |
+| `npm run test:integration` | Testes de integração |
+| `npm run test:e2e` | Testes HTTP/e2e |
+| `npm run test:all` | Unit + integration + e2e |
+| `npm run db:generate` | Gera migration a partir do schema |
+| `npm run db:migrate` | Aplica migrations pendentes |
+| `npm run db:create-test` | Cria banco `short_url_test` (para testes) |
+
+## Banco de dados e migrations
+
+- Banco: PostgreSQL
+- ORM: Drizzle
+- Migrations aplicadas via `npm run db:migrate`
+- Novas migrations: edite o schema em `src/infra/database/schema/`, depois `npm run db:generate`
+- **Não edite migrations já aplicadas**
+- Seed: não implementado neste projeto
+
+## Testes
+
+### Unitários
+
+Rodam em memória, sem banco nem Redis:
+
+```bash
+npm run test
+```
+
+Arquivos: `src/**/*.spec.ts`.
+
+### Integração e E2E
+
+Testes de integração (repositório contra banco real) e e2e (API completa via supertest) precisam de **PostgreSQL** e **Redis** rodando. Usam `.env.test` e o banco `short_url_test`.
+
+**Passo a passo para rodar integration e e2e:**
+
+1. Suba apenas postgres e redis (sem a API):
+   ```bash
+   docker compose up -d postgres redis
+   ```
+
+2. Crie o banco de teste:
+   ```bash
+   npm run db:create-test
+   ```
+   (ou `docker compose run --rm create-test-db`)
+
+3. Execute os testes:
+   ```bash
+   npm run test:integration   # Repositório + banco
+   npm run test:e2e           # API completa (NestJS in-memory + supertest)
+   ```
+
+   Ou ambos: `npm run test:all`
+
+**Observações:**
+
+- Os testes e2e bootam a aplicação NestJS em memória e fazem requisições via supertest; não é necessário subir a API em outro processo.
+- O `.env.test` aponta para `localhost:5432` e `localhost:6379`; o Docker Compose expõe essas portas.
+- Se postgres ou redis não estiverem rodando, os testes falham com erro de conexão.
+
+## Swagger
+
+- URL local: http://localhost:3000/api/docs
+- Requer a aplicação rodando
+- Documentação interativa da API
+
+## Convenções do projeto
+
+- Organização por feature/domínio
+- Validação com Zod (schemas nos contracts)
+- Regras de negócio nos use cases, não no controller
+- Acesso a banco via repositório (interface no domain)
+- TypeScript strict mode
+- Contratos HTTP tipados e documentados com Swagger
+
+## Fluxo de qualidade (antes de PR)
+
+Execute localmente:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test:all
+npm run build
+```
+
+## ADRs
+
+Decisões arquiteturais estão em `adr/`. O README cobre onboarding e execução; os ADRs detalham trade-offs e racional técnico.
