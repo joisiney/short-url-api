@@ -35,7 +35,7 @@ export class GetShortUrlStatsUseCase {
     if (!shortUrl) {
       return ResultUtils.fail(new ShortUrlNotFoundError(shortCode));
     }
-    
+
     return ResultUtils.ok({
       id: shortUrl.id,
       url: shortUrl.url,

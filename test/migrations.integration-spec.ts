@@ -23,7 +23,9 @@ describe('Migrations e schema (integration)', () => {
       WHERE table_name = 'short_urls'
       ORDER BY ordinal_position
     `);
-    const columns = result.rows.map((r: { column_name: string }) => r.column_name);
+    const columns = result.rows.map(
+      (r: { column_name: string }) => r.column_name,
+    );
 
     expect(columns).toContain('id');
     expect(columns).toContain('url');
@@ -38,7 +40,9 @@ describe('Migrations e schema (integration)', () => {
       SELECT constraint_name FROM information_schema.table_constraints
       WHERE table_name = 'short_urls' AND constraint_type = 'UNIQUE'
     `);
-    const names = result.rows.map((r: { constraint_name: string }) => r.constraint_name);
+    const names = result.rows.map(
+      (r: { constraint_name: string }) => r.constraint_name,
+    );
     expect(names.some((n) => n.includes('short_code'))).toBe(true);
   });
 });
