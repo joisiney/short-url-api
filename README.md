@@ -105,6 +105,16 @@ npm run start:dev
 | `npm run db:migrate` | Aplica migrations pendentes |
 | `npm run db:create-test` | Cria banco `short_url_test` (para testes) |
 
+## Redis
+
+O Redis e usado para **cache** e **seguranca** (ADR-00-14):
+
+- **Rate limit distribuido**: Throttler com storage Redis; limites por rota (POST /shorten: 20 req/min, GET /shorten/:shortCode: 100 req/min)
+- **Cache**: consultas `findByShortCode` cacheadas com TTL configurável (`CACHE_TTL_SECONDS`); invalidacao em PUT e DELETE
+- **Health**: `/health/ready` inclui Redis; retorna `degraded` se Redis estiver down
+
+Variaveis: `REDIS_*`, `CACHE_TTL_SECONDS` (opcional, default 60).
+
 ## Banco de dados e migrations
 
 - Banco: PostgreSQL
