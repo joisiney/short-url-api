@@ -1,15 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import appConfig from '../config/app.config';
+import { ConfigModule } from '../config/config.module';
 import { ShortUrlModule } from '../modules/short-url/short-url.module';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [appConfig],
-    }),
-    ShortUrlModule,
-  ],
+  imports: [ConfigModule, ShortUrlModule],
 })
 export class AppModule {}

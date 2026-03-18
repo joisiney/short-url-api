@@ -1,10 +1,25 @@
 import { registerAs } from '@nestjs/config';
-import { envSchema } from './env.schema';
+import { parseEnv } from './env.parser';
 
-export default registerAs('app', () => {
-  const parsed = envSchema.parse(process.env);
+export type AppConfig = {
+  nodeEnv: 'development' | 'test' | 'production';
+  port: number;
+  host: string;
+  globalPrefix: string;
+  corsOrigin: string[];
+  bodyLimit: string;
+  enableSwagger: boolean;
+};
+
+export default registerAs('app', (): AppConfig => {
+  const parsedEnv = parseEnv(process.env);
   return {
-    nodeEnv: parsed.NODE_ENV,
-    port: parsed.PORT,
+    nodeEnv: parsedEnv.NODE_ENV,
+    port: parsedEnv.APP_PORT,
+    host: parsedEnv.APP_HOST,
+    globalPrefix: parsedEnv.APP_GLOBAL_PREFIX,
+    corsOrigin: parsedEnv.APP_CORS_ORIGIN,
+    bodyLimit: parsedEnv.APP_BODY_LIMIT,
+    enableSwagger: parsedEnv.APP_ENABLE_SWAGGER,
   };
 });
