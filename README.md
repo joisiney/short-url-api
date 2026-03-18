@@ -1,6 +1,7 @@
 # Short URL API
 
-API REST de encurtamento de URLs. Permite criar, consultar, atualizar e remover URLs curtas, além de consultar estatísticas de acesso. Arquitetura orientada por domínio, tipagem estrita e validação com Zod.
+API REST de encurtamento de URLs. Permite criar, consultar, atualizar e remover URLs curtas, além de consultar estatísticas de acesso. 
+Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto foco em segurança, escalabilidade e qualidade guiada por **TDD (Test-Driven Development)**.
 
 ## Stack
 
@@ -21,6 +22,111 @@ API REST de encurtamento de URLs. Permite criar, consultar, atualizar e remover 
 - Atualizar short URL
 - Deletar short URL
 - Consultar estatísticas de acesso
+
+## Arquitetura e Soluções (C4 Model)
+
+O projeto foi desenhado buscando uma forte consistência estrutural. Abaixo detalhamos a modelagem através da visão de Contexto, Container, Componentes e Fluxo Interno.
+
+### 1. Diagrama de Contexto
+```mermaid
+flowchart LR
+    User[Cliente API / Frontend] --> API[URL Shortening API]
+    API --> PG[(PostgreSQL)]
+    API --> Redis[(Redis)]
+    Dev[Developer] --> Swagger[Swagger / OpenAPI]
+    Swagger --> API
+```
+
+### 2. Diagrama de Container
+```mermaid
+flowchart TB
+    Client[Cliente HTTP / Frontend]
+    ReverseProxy[Gateway / Reverse Proxy / TLS]
+    NestApi[NestJS API Container]
+    Postgres[(PostgreSQL Container)]
+    Redis[(Redis Container)]
+    Obs[Logs / Metrics / Healthchecks]
+
+    Client --> ReverseProxy
+    ReverseProxy --> NestApi
+    NestApi --> Postgres
+    NestApi --> Redis
+    NestApi --> Obs
+```
+
+### 3. Diagrama de Componente (Módulo: `short-url`)
+```mermaid
+flowchart LR
+    Controller[Controllers]
+    Throttler[ThrottlerGuard]
+    ZodValidation[Zod Validation Pipe/Layer]
+    UseCases[Use Cases]
+    Generator[ShortCodeGeneratorService]
+    RepoPort[ShortUrlRepository Port]
+    CachedRepo[CachedShortUrlRepository]
+    DrizzleRepo[DrizzleShortUrlRepository]
+    Redis[(Redis)]
+    Mapper[Persistence Mapper]
+    DrizzleSchema[Drizzle Schema]
+    Postgres[(PostgreSQL)]
+    Presenter[Presenters]
+
+    Controller --> Throttler
+    Throttler --> Controller
+    Controller --> ZodValidation
+    ZodValidation --> UseCases
+    UseCases --> Generator
+    UseCases --> RepoPort
+    RepoPort --> CachedRepo
+    CachedRepo --> Redis
+    CachedRepo --> DrizzleRepo
+    DrizzleRepo --> Mapper
+    DrizzleRepo --> DrizzleSchema
+    DrizzleSchema --> Postgres
+    UseCases --> Presenter
+```
+
+### 4. Fluxo Interno da Aplicação (Code Diagram)
+```mermaid
+flowchart TD
+    A[HTTP Request] --> B[Controller]
+    B --> C[Validation Layer Zod]
+    C --> D[Use Case]
+    D --> E[Domain Rules]
+    D --> F[Repository Port]
+    F --> G[Drizzle Repository]
+    G --> H[(PostgreSQL)]
+    D --> I[Presenter]
+    I --> J[HTTP Response]
+```
+
+## Modelo de Dados (ER)
+Estrutura simples e objetiva em uma única tabela para suprir a necessidade de rastreio de URLs curtas e cliques totais.
+```mermaid
+erDiagram
+    SHORT_URLS {
+        uuid id PK
+        text url
+        varchar short_code UK
+        bigint access_count
+        timestamptz created_at
+        timestamptz updated_at
+    }
+```
+
+## Escalabilidade e Segurança
+
+O projeto adotou as seguintes práticas visando controle de concorrência massiva e proteção superficial de ataques comuns:
+
+### Escalabilidade
+- **Stateless API:** A API baseada em NestJS não retém estado na sua infraestrutura, os controles e cachês em requisições intensas são deslocados para serviços externos como o Redis, permitindo instanciar "N" réplicas no provisionamento cloud via Load Balancer.
+- **Throttling Distribuído e Cache:** O Rate Limit utiliza o Redis como storage permitindo que o limite de bloqueio por IP ou chaves customizadas seja globalizado em todas as instâncias da API.
+- **Isolamento e Índices do Banco:** A criação do índice simples e das constraints de integridade no banco delegam do motor NodeJS a responsabilidade de travar acessos concorrentes para criar nomes (short codes) já existentes.
+
+### Segurança
+- **Proteção do Endpoint e Headers:** A biblioteca `Helmet` embutida garante proteções contra Clickjacking (X-Frame-Options), restrições MIME e Sniffing de conteúdo, enquanto mantemos o `x-powered-by` oculto para ofuscar o Stack técnico utilizado. As regras de CORS são rigorosas para bloquear requests não autorizados num front-end externo.
+- **Gatekeeper Rigoroso (Zod):** A API adota `strict()` schema rules para rejeitar e padronizar toda entrada externa (payloads HTTP), não permitindo chaves surpresas. Tudo é sanitizado e validado antes mesmo do trânsito na Controller e nos Use Cases.
+- **Query Builds Seguras e Tratamento Drizzle:** Proteção contra SQL injections nativamente implementadas no uso restrito dos Query Builders. Não utilizamos concatenações abertas para evitar execução indevida. O Drizzle mapeia apenas tabelas autorizadas na memória e oculta relatórios de erro do DB.
 
 ## Estrutura do projeto
 
@@ -124,19 +230,22 @@ Variaveis: `REDIS_*`, `CACHE_TTL_SECONDS` (opcional, default 60).
 - **Não edite migrations já aplicadas**
 - Seed: não implementado neste projeto
 
-## Testes
+## Testes e Cobertura (TDD)
 
-### Unitários
+Toda essa feature foi construída estruturada na metodologia **Test-Driven Development (TDD)** focada na robustez e confiabilidade dos cenários base e fluxos alternativos da implementação do encurtador. Esta arquitetura reflete uma pirâmide abrangente:
 
-Rodam em memória, sem banco nem Redis:
+### 1. Unitários (Regras de Domínio/Aplicação)
 
+Rodam rapidamente em memória, abstraindo o contato de dependências reais (como Banco/Rede). Testamos pesadamente as regras dos UseCases usando um Repository "In-Memory" para cobrir 100% de cenários críticos.
 ```bash
 npm run test
 ```
-
 Arquivos: `src/**/*.spec.ts`.
 
-### Integração e E2E
+### 2. Integração e E2E (Casos de uso completos e HTTP)
+
+Os testes de integração focam na comunicação e comportamento persistente do Repositório (Drizzle) diretamente num banco efêmero de testes.
+Em paralelo, os testes E2E validam fluxos da camada externa em diante, testando inclusive Headers HTTP e os erros formatados pelo Exception Filter, batendo do endpoint HTTP montado até o Banco.
 
 Testes de integração (repositório contra banco real) e e2e (API completa via supertest) precisam de **PostgreSQL** e **Redis** rodando. Usam `.env.test` e o banco `short_url_test`.
 
@@ -153,19 +262,18 @@ Testes de integração (repositório contra banco real) e e2e (API completa via 
    ```
    (ou `docker compose run --rm create-test-db`)
 
-3. Execute os testes:
+3. Execute os testes Específicos:
    ```bash
-   npm run test:integration   # Repositório + banco
-   npm run test:e2e           # API completa (NestJS in-memory + supertest)
+   npm run test:integration   # Repositório + banco de teste
+   npm run test:e2e           # API completa acoplada HTTP supertest
    ```
 
-   Ou ambos: `npm run test:all`
+   Ou ambos os escopos integrados: `npm run test:all`
 
-**Observações:**
-
-- Os testes e2e bootam a aplicação NestJS em memória e fazem requisições via supertest; não é necessário subir a API em outro processo.
-- O `.env.test` aponta para `localhost:5432` e `localhost:6379`; o Docker Compose expõe essas portas.
-- Se postgres ou redis não estiverem rodando, os testes falham com erro de conexão.
+**Observações Técnicas:**
+- Os testes e2e bootam a aplicação NestJS em memória e fazem requisições simuladas via supertest; não é necessário rodar "npm run start" em background na maioria dos casos.
+- O `.env.test` aponta para `localhost:5432` e `localhost:6379`; o Docker Compose expõe essas portas automaticamente nos serviços.
+- Se o postgres isolado de teste ou o container do redis não estiverem acessíveis, eles apresentarão erro de pool conectction e falharão propositalmente.
 
 ## Swagger
 
@@ -195,7 +303,3 @@ npm run build
 ```
 
 Commits devem seguir [Conventional Commits](https://www.conventionalcommits.org/): `tipo(escopo): descrição` (ex: `feat(short-url): add create endpoint`).
-
-## ADRs
-
-Decisões arquiteturais estão em `adr/`. O README cobre onboarding e execução; os ADRs detalham trade-offs e racional técnico.
