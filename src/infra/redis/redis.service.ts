@@ -1,19 +1,16 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import type { RedisConfig } from '../../config/redis.config';
 
 /**
  * Redis usado para cache (CachedShortUrlRepository) e seguranca (Throttler rate limit distribuido).
- * ADR-00-14.
  */
 @Injectable()
-export class RedisService implements OnModuleInit, OnModuleDestroy {
-  private client: Redis | null = null;
+export class RedisService implements OnModuleDestroy {
+  private readonly client: Redis;
 
-  constructor(private readonly configService: ConfigService) {}
-
-  onModuleInit(): void {
+  constructor(private readonly configService: ConfigService) {
     const config = this.configService.get<RedisConfig>('redis');
     if (!config) {
       throw new Error('Redis config nao carregada');
@@ -34,22 +31,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.client) {
-      await this.client.quit();
-      this.client = null;
-    }
+    await this.client.quit();
   }
 
   getClient(): Redis {
-    if (!this.client) {
-      throw new Error('Redis client nao inicializado');
-    }
     return this.client;
   }
 
   async ping(): Promise<boolean> {
     try {
-      const result = await this.client?.ping();
+      const result = await this.client.ping();
       return result === 'PONG';
     } catch {
       return false;
