@@ -71,18 +71,19 @@ export class ShortenController {
   async create(
     @Body() body: CreateShortUrlRequestDto,
   ): Promise<ShortUrlResponse> {
-    try {
-      const result = await this.createShortUrl.execute({ url: body.url });
-      return ShortUrlPresenter.toResponse(result);
-    } catch (error) {
-      if (error instanceof ShortCodeGenerationExhaustedError) {
+    const result = await this.createShortUrl.execute({ url: body.url });
+
+    if (result.isFailure) {
+      if (result.error instanceof ShortCodeGenerationExhaustedError) {
         throw new ConflictException({
           code: 'SHORT_CODE_GENERATION_EXHAUSTED',
-          message: error.message,
+          message: result.error.message,
         });
       }
-      throw error;
+      throw result.error;
     }
+
+    return ShortUrlPresenter.toResponse(result.value);
   }
 
   @Get('shorten/:shortCode')
@@ -96,18 +97,19 @@ export class ShortenController {
     @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
     shortCode: string,
   ): Promise<ShortUrlResponse> {
-    try {
-      const result = await this.getShortUrl.execute({ shortCode });
-      return ShortUrlPresenter.toResponse(result);
-    } catch (error) {
-      if (error instanceof ShortUrlNotFoundError) {
+    const result = await this.getShortUrl.execute({ shortCode });
+
+    if (result.isFailure) {
+      if (result.error instanceof ShortUrlNotFoundError) {
         throw new NotFoundException({
           code: 'SHORT_URL_NOT_FOUND',
-          message: error.message,
+          message: result.error.message,
         });
       }
-      throw error;
+      throw result.error;
     }
+
+    return ShortUrlPresenter.toResponse(result.value);
   }
 
   @Put('shorten/:shortCode')
@@ -124,21 +126,22 @@ export class ShortenController {
     shortCode: string,
     @Body() body: UpdateShortUrlRequestDto,
   ): Promise<ShortUrlResponse> {
-    try {
-      const result = await this.updateShortUrl.execute({
-        shortCode,
-        url: body.url,
-      });
-      return ShortUrlPresenter.toResponse(result);
-    } catch (error) {
-      if (error instanceof ShortUrlNotFoundError) {
+    const result = await this.updateShortUrl.execute({
+      shortCode,
+      url: body.url,
+    });
+
+    if (result.isFailure) {
+      if (result.error instanceof ShortUrlNotFoundError) {
         throw new NotFoundException({
           code: 'SHORT_URL_NOT_FOUND',
-          message: error.message,
+          message: result.error.message,
         });
       }
-      throw error;
+      throw result.error;
     }
+
+    return ShortUrlPresenter.toResponse(result.value);
   }
 
   @Delete('shorten/:shortCode')
@@ -152,16 +155,16 @@ export class ShortenController {
     @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
     shortCode: string,
   ): Promise<void> {
-    try {
-      await this.deleteShortUrl.execute({ shortCode });
-    } catch (error) {
-      if (error instanceof ShortUrlNotFoundError) {
+    const result = await this.deleteShortUrl.execute({ shortCode });
+
+    if (result.isFailure) {
+      if (result.error instanceof ShortUrlNotFoundError) {
         throw new NotFoundException({
           code: 'SHORT_URL_NOT_FOUND',
-          message: error.message,
+          message: result.error.message,
         });
       }
-      throw error;
+      throw result.error;
     }
   }
 
@@ -176,17 +179,18 @@ export class ShortenController {
     @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
     shortCode: string,
   ): Promise<ShortUrlStatsResponse> {
-    try {
-      const result = await this.getShortUrlStats.execute({ shortCode });
-      return ShortUrlPresenter.toStatsResponse(result);
-    } catch (error) {
-      if (error instanceof ShortUrlNotFoundError) {
+    const result = await this.getShortUrlStats.execute({ shortCode });
+
+    if (result.isFailure) {
+      if (result.error instanceof ShortUrlNotFoundError) {
         throw new NotFoundException({
           code: 'SHORT_URL_NOT_FOUND',
-          message: error.message,
+          message: result.error.message,
         });
       }
-      throw error;
+      throw result.error;
     }
+
+    return ShortUrlPresenter.toStatsResponse(result.value);
   }
 }

@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { Result, ResultUtils } from '../../../../shared/utils/result';
 
 import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
 import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';
@@ -24,7 +25,9 @@ export class UpdateShortUrlUseCase {
     private readonly shortUrlRepository: ShortUrlRepository,
   ) {}
 
-  async execute(input: UpdateShortUrlInput): Promise<UpdateShortUrlOutput> {
+  async execute(
+    input: UpdateShortUrlInput,
+  ): Promise<Result<UpdateShortUrlOutput, ShortUrlNotFoundError>> {
     const { shortCode, url } = input;
 
     const updatedShortUrl = await this.shortUrlRepository.updateUrlByShortCode({
@@ -33,15 +36,15 @@ export class UpdateShortUrlUseCase {
     });
 
     if (!updatedShortUrl) {
-      throw new ShortUrlNotFoundError(shortCode);
+      return ResultUtils.fail(new ShortUrlNotFoundError(shortCode));
     }
 
-    return {
+    return ResultUtils.ok({
       id: updatedShortUrl.id,
       url: updatedShortUrl.url,
       shortCode: updatedShortUrl.shortCode,
       createdAt: updatedShortUrl.createdAt,
       updatedAt: updatedShortUrl.updatedAt,
-    };
+    });
   }
 }

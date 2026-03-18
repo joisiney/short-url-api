@@ -21,8 +21,6 @@ function makeRepository(
   return {
     create: jest.fn(),
     findByShortCode: jest.fn().mockResolvedValue(null),
-    update: jest.fn(),
-    delete: jest.fn(),
     incrementAccessCount: jest.fn().mockResolvedValue(undefined),
     updateUrlByShortCode: jest.fn(),
     deleteByShortCode: jest.fn(),
@@ -43,18 +41,19 @@ describe('GetShortUrlUseCase', () => {
 
     const result = await useCase.execute({ shortCode: 'abc123' });
 
-    expect(result).toMatchObject({
+    expect(result.isSuccess).toBe(true);
+    expect(result.value).toMatchObject({
       id: 'some-uuid',
       url: 'https://example.com',
       shortCode: 'abc123',
     });
-    expect(result.createdAt).toBeInstanceOf(Date);
-    expect(result.updatedAt).toBeInstanceOf(Date);
+    expect(result.value?.createdAt).toBeInstanceOf(Date);
+    expect(result.value?.updatedAt).toBeInstanceOf(Date);
     expect(findMock).toHaveBeenCalledWith('abc123');
     expect(incrementMock).toHaveBeenCalledWith('abc123');
   });
 
-  it('deve lançar ShortUrlNotFoundError quando shortCode não existe', async () => {
+  it('deve retornar falha com ShortUrlNotFoundError quando shortCode não existe', async () => {
     const findMock = jest.fn().mockResolvedValue(null);
     const incrementMock = jest.fn();
     const repository = makeRepository({
@@ -63,10 +62,10 @@ describe('GetShortUrlUseCase', () => {
     });
     const useCase = new GetShortUrlUseCase(repository);
 
-    await expect(
-      useCase.execute({ shortCode: 'naoexiste' }),
-    ).rejects.toBeInstanceOf(ShortUrlNotFoundError);
+    const result = await useCase.execute({ shortCode: 'naoexiste' });
 
+    expect(result.isFailure).toBe(true);
+    expect(result.error).toBeInstanceOf(ShortUrlNotFoundError);
     expect(incrementMock).not.toHaveBeenCalled();
   });
 

@@ -16,8 +16,6 @@ function makeRepository(
   return {
     create: jest.fn().mockResolvedValue(undefined),
     findByShortCode: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
     incrementAccessCount: jest.fn(),
     updateUrlByShortCode: jest.fn(),
     deleteByShortCode: jest.fn(),
@@ -40,13 +38,14 @@ describe('CreateShortUrlUseCase', () => {
 
     const result = await useCase.execute({ url: 'https://example.com' });
 
-    expect(result).toMatchObject({
+    expect(result.isSuccess).toBe(true);
+    expect(result.value).toMatchObject({
       url: 'https://example.com',
       shortCode: 'abc123',
     });
-    expect(result.id).toBeDefined();
-    expect(result.createdAt).toBeInstanceOf(Date);
-    expect(result.updatedAt).toBeInstanceOf(Date);
+    expect(result.value?.id).toBeDefined();
+    expect(result.value?.createdAt).toBeInstanceOf(Date);
+    expect(result.value?.updatedAt).toBeInstanceOf(Date);
     expect(createMock).toHaveBeenCalledTimes(1);
   });
 
@@ -57,7 +56,8 @@ describe('CreateShortUrlUseCase', () => {
 
     const result = await useCase.execute({ url: 'https://example.com/path' });
 
-    expect(result.createdAt.getTime()).toBe(result.updatedAt.getTime());
+    expect(result.isSuccess).toBe(true);
+    expect(result.value?.createdAt.getTime()).toBe(result.value?.updatedAt.getTime());
   });
 
   it('deve fazer retry quando houver colisão de shortCode', async () => {
@@ -77,11 +77,12 @@ describe('CreateShortUrlUseCase', () => {
     const useCase = new CreateShortUrlUseCase(repository, generator);
     const result = await useCase.execute({ url: 'https://example.com' });
 
+    expect(result.isSuccess).toBe(true);
     expect(createMock).toHaveBeenCalledTimes(2);
-    expect(result.shortCode).toBe('unico22');
+    expect(result.value?.shortCode).toBe('unico22');
   });
 
-  it(`deve lançar ShortCodeGenerationExhaustedError após ${MAX_ATTEMPTS} tentativas`, async () => {
+  it(`deve retornar falha com ShortCodeGenerationExhaustedError após ${MAX_ATTEMPTS} tentativas`, async () => {
     const createMock = jest
       .fn()
       .mockRejectedValue(new ShortCodeConflictError('xpto99'));
@@ -89,10 +90,10 @@ describe('CreateShortUrlUseCase', () => {
     const generator = makeGenerator('xpto99');
     const useCase = new CreateShortUrlUseCase(repository, generator);
 
-    await expect(
-      useCase.execute({ url: 'https://example.com' }),
-    ).rejects.toBeInstanceOf(ShortCodeGenerationExhaustedError);
+    const result = await useCase.execute({ url: 'https://example.com' });
 
+    expect(result.isFailure).toBe(true);
+    expect(result.error).toBeInstanceOf(ShortCodeGenerationExhaustedError);
     expect(createMock).toHaveBeenCalledTimes(MAX_ATTEMPTS);
   });
 
