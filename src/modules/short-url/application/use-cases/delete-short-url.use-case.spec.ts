@@ -8,8 +8,6 @@ function makeRepository(
   return {
     create: jest.fn(),
     findByShortCode: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
     incrementAccessCount: jest.fn(),
     updateUrlByShortCode: jest.fn(),
     deleteByShortCode: jest.fn().mockResolvedValue(false),
@@ -27,19 +25,20 @@ describe('DeleteShortUrlUseCase', () => {
 
     const result = await useCase.execute({ shortCode: 'abc123' });
 
-    expect(result).toBeUndefined();
+    expect(result.isSuccess).toBe(true);
     expect(deleteMock).toHaveBeenCalledWith('abc123');
   });
 
-  it('deve lançar ShortUrlNotFoundError quando o repositório retorna false (não encontrado)', async () => {
+  it('deve retornar falha com ShortUrlNotFoundError quando o repositório retorna false (não encontrado)', async () => {
     const repository = makeRepository({
       deleteByShortCode: jest.fn().mockResolvedValue(false),
     });
     const useCase = new DeleteShortUrlUseCase(repository);
 
-    await expect(
-      useCase.execute({ shortCode: 'naoexiste' }),
-    ).rejects.toBeInstanceOf(ShortUrlNotFoundError);
+    const result = await useCase.execute({ shortCode: 'naoexiste' });
+
+    expect(result.isFailure).toBe(true);
+    expect(result.error).toBeInstanceOf(ShortUrlNotFoundError);
   });
 
   it('deve propagar erro inesperado do repositório', async () => {

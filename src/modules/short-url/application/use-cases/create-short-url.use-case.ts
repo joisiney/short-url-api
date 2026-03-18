@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { Result, ResultUtils } from '../../../../shared/utils/result';
 
 import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
 import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';
@@ -30,7 +31,9 @@ export class CreateShortUrlUseCase {
     private readonly shortCodeGenerator: ShortCodeGeneratorService,
   ) {}
 
-  async execute(input: CreateShortUrlInput): Promise<CreateShortUrlOutput> {
+  async execute(
+    input: CreateShortUrlInput,
+  ): Promise<Result<CreateShortUrlOutput, ShortCodeGenerationExhaustedError>> {
     const { url } = input;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -49,13 +52,13 @@ export class CreateShortUrlUseCase {
       try {
         await this.shortUrlRepository.create(shortUrl);
 
-        return {
+        return ResultUtils.ok({
           id: shortUrl.id,
           url: shortUrl.url,
           shortCode: shortUrl.shortCode,
           createdAt: shortUrl.createdAt,
           updatedAt: shortUrl.updatedAt,
-        };
+        });
       } catch (error) {
         if (error instanceof ShortCodeConflictError) {
           // retry with a new code on the next iteration
@@ -66,6 +69,6 @@ export class CreateShortUrlUseCase {
       }
     }
 
-    throw new ShortCodeGenerationExhaustedError(MAX_ATTEMPTS);
+    return ResultUtils.fail(new ShortCodeGenerationExhaustedError(MAX_ATTEMPTS));
   }
 }

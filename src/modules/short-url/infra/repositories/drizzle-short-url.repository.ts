@@ -50,22 +50,6 @@ export class DrizzleShortUrlRepository implements ShortUrlRepository {
     return ShortUrlPersistenceMapper.toDomain(record);
   }
 
-  async update(shortUrl: ShortUrl): Promise<void> {
-    const data = ShortUrlPersistenceMapper.toPersistence(shortUrl);
-    await this.db
-      .update(shortUrls)
-      .set({ url: data.url, updatedAt: data.updatedAt })
-      .where(eq(shortUrls.shortCode, data.shortCode))
-      .execute();
-  }
-
-  async delete(shortCode: string): Promise<void> {
-    await this.db
-      .delete(shortUrls)
-      .where(eq(shortUrls.shortCode, shortCode))
-      .execute();
-  }
-
   async incrementAccessCount(shortCode: string): Promise<void> {
     await this.db
       .update(shortUrls)

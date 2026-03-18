@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { Result, ResultUtils } from '../../../../shared/utils/result';
 
 import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
 import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';
@@ -17,13 +18,17 @@ export class DeleteShortUrlUseCase {
     private readonly shortUrlRepository: ShortUrlRepository,
   ) {}
 
-  async execute(input: DeleteShortUrlInput): Promise<DeleteShortUrlOutput> {
+  async execute(
+    input: DeleteShortUrlInput,
+  ): Promise<Result<DeleteShortUrlOutput, ShortUrlNotFoundError>> {
     const { shortCode } = input;
 
     const deleted = await this.shortUrlRepository.deleteByShortCode(shortCode);
 
     if (!deleted) {
-      throw new ShortUrlNotFoundError(shortCode);
+      return ResultUtils.fail(new ShortUrlNotFoundError(shortCode));
     }
+
+    return ResultUtils.ok(undefined);
   }
 }
