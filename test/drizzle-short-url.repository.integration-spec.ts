@@ -126,8 +126,13 @@ describe('DrizzleShortUrlRepository (integration)', () => {
     const shortUrl = makeShortUrl({ shortCode: 'dup01' });
     await repository.create(shortUrl);
 
-    const duplicate = makeShortUrl({ shortCode: 'dup01', id: crypto.randomUUID() });
+    const duplicate = makeShortUrl({
+      shortCode: 'dup01',
+      id: crypto.randomUUID(),
+    });
 
-    await expect(repository.create(duplicate)).rejects.toThrow(ShortCodeConflictError);
+    await expect(repository.create(duplicate)).rejects.toThrow(
+      ShortCodeConflictError,
+    );
   });
 });

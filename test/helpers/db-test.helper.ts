@@ -24,7 +24,10 @@ export function createTestDb() {
     db,
     async runMigrations() {
       await migrate(db, {
-        migrationsFolder: resolve(__dirname, '../../src/infra/database/migrations'),
+        migrationsFolder: resolve(
+          __dirname,
+          '../../src/infra/database/migrations',
+        ),
       });
     },
     async truncateShortUrls() {

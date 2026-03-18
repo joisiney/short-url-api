@@ -90,11 +90,16 @@ npm run start:dev
 | `npm run start:dev` | App em modo dev (watch) |
 | `npm run build` | Build de produção |
 | `npm run start:prod` | Executa build (node dist) |
-| `npm run lint` | ESLint |
+| `npm run format` | Prettier (formata arquivos) |
+| `npm run format:check` | Prettier (valida sem alterar) |
+| `npm run lint` | ESLint (validação) |
+| `npm run lint:fix` | ESLint (corrige automaticamente) |
 | `npm run typecheck` | Checagem de tipos (tsc --noEmit) |
 | `npm run test` | Testes unitários |
+| `npm run test:unit` | Alias para testes unitários |
 | `npm run test:integration` | Testes de integração |
 | `npm run test:e2e` | Testes HTTP/e2e |
+| `npm run test:http` | Alias para test:e2e |
 | `npm run test:all` | Unit + integration + e2e |
 | `npm run db:generate` | Gera migration a partir do schema |
 | `npm run db:migrate` | Aplica migrations pendentes |
@@ -169,14 +174,17 @@ Testes de integração (repositório contra banco real) e e2e (API completa via 
 
 ## Fluxo de qualidade (antes de PR)
 
-Execute localmente:
+Execute localmente (ordem recomendada):
 
 ```bash
+npm run format          # quando necessário
 npm run lint
 npm run typecheck
 npm run test:all
 npm run build
 ```
+
+Commits devem seguir [Conventional Commits](https://www.conventionalcommits.org/): `tipo(escopo): descrição` (ex: `feat(short-url): add create endpoint`).
 
 ## ADRs
 
