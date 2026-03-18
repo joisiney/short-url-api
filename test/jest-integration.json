@@ -1,15 +1,19 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
+  "rootDir": "..",
   "testEnvironment": "node",
-  "testRegex": ".integration-spec.ts$",
+  "testRegex": "test/.*\\.integration-spec\\.ts$",
   "forceExit": true,
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "transformIgnorePatterns": ["/node_modules/(?!nanoid)/"],
-  "setupFiles": ["<rootDir>/setup-env.ts"],
+  "setupFiles": ["<rootDir>/test/setup-env.ts"],
   "moduleNameMapper": {
-    "^src/(.*)$": "<rootDir>/../src/$1"
-  }
+    "^src/(.*)$": "<rootDir>/src/$1"
+  },
+  "collectCoverageFrom": [
+    "<rootDir>/src/**/*.(t|j)s"
+  ],
+  "coverageDirectory": "./coverage-integration"
 }
