@@ -128,6 +128,14 @@ export const envSchema = z
     REDIS_TLS_ENABLED: booleanString,
     REDIS_CONNECT_TIMEOUT_MS: milliseconds,
 
+    CACHE_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(86400)
+      .optional()
+      .default(60),
+
     // ── Logger ────────────────────────────────────────────────────────────────
     LOG_LEVEL: z.enum(['debug', 'log', 'warn', 'error']),
     LOG_PRETTY: booleanString,

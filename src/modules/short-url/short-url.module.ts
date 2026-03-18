@@ -10,9 +10,12 @@ import { GetShortUrlStatsUseCase } from './application/use-cases/get-short-url-s
 import { ShortCodeGeneratorService } from './application/services/short-code-generator.service';
 
 import { DrizzleShortUrlRepository } from './infra/repositories/drizzle-short-url.repository';
+import { CachedShortUrlRepository } from './infra/repositories/cached-short-url.repository';
 import { SHORT_URL_REPOSITORY } from './domain/repositories/short-url.repository';
+import { RedisModule } from '../../infra/redis/redis.module';
 
 @Module({
+  imports: [RedisModule],
   controllers: [ShortenController],
   providers: [
     // Application
@@ -22,10 +25,11 @@ import { SHORT_URL_REPOSITORY } from './domain/repositories/short-url.repository
     DeleteShortUrlUseCase,
     GetShortUrlStatsUseCase,
     ShortCodeGeneratorService,
-    // Infrastructure — bind interface token to concrete implementation
+    // Infrastructure
+    DrizzleShortUrlRepository,
     {
       provide: SHORT_URL_REPOSITORY,
-      useClass: DrizzleShortUrlRepository,
+      useClass: CachedShortUrlRepository,
     },
   ],
 })

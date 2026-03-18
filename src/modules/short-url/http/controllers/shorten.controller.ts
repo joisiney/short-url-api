@@ -12,6 +12,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiTags,
   ApiOperation,
@@ -74,6 +75,7 @@ export class ShortenController {
   ) {}
 
   @Post('shorten')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Criar URL curta' })
   @ApiBody({ type: CreateShortUrlRequest })
@@ -117,6 +119,7 @@ export class ShortenController {
   }
 
   @Get('shorten/:shortCode')
+  @Throttle({ default: { limit: 100, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obter URL original pelo short code' })
   @ApiParam(SHORT_CODE_PARAM)

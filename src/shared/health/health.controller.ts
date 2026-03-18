@@ -1,9 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { DatabaseService } from '../../infra/database/database.service';
+import { RedisService } from '../../infra/redis/redis.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly redisService: RedisService,
+  ) {}
 
   @Get('live')
   getLiveness() {
@@ -12,26 +16,34 @@ export class HealthController {
 
   @Get('ready')
   async getReadiness() {
-    const dbHealthy = await this.databaseService.isHealthy();
+    const [dbHealthy, redisHealthy] = await Promise.all([
+      this.databaseService.isHealthy(),
+      this.redisService.ping(),
+    ]);
 
-    const allHealthy = dbHealthy;
+    const allHealthy = dbHealthy && redisHealthy;
 
     return {
       status: allHealthy ? 'ok' : 'degraded',
       dependencies: {
         database: dbHealthy ? 'up' : 'down',
+        redis: redisHealthy ? 'up' : 'down',
       },
     };
   }
 
   @Get()
   async getHealth() {
-    const dbHealthy = await this.databaseService.isHealthy();
+    const [dbHealthy, redisHealthy] = await Promise.all([
+      this.databaseService.isHealthy(),
+      this.redisService.ping(),
+    ]);
 
     return {
-      status: dbHealthy ? 'ok' : 'degraded',
+      status: dbHealthy && redisHealthy ? 'ok' : 'degraded',
       summary: {
         database: dbHealthy ? 'up' : 'down',
+        redis: redisHealthy ? 'up' : 'down',
       },
     };
   }

@@ -575,34 +575,42 @@ flowchart TB
 ```mermaid
 flowchart LR
     Controller[Controllers]
+    Throttler[ThrottlerGuard]
     ZodValidation[Zod Validation Pipe/Layer]
     UseCases[Use Cases]
     Generator[ShortCodeGeneratorService]
     RepoPort[ShortUrlRepository Port]
-    RepoImpl[DrizzleShortUrlRepository]
+    CachedRepo[CachedShortUrlRepository]
+    DrizzleRepo[DrizzleShortUrlRepository]
+    Redis[(Redis)]
     Mapper[Persistence Mapper]
     DrizzleSchema[Drizzle Schema]
     Postgres[(PostgreSQL)]
     Presenter[Presenters]
 
+    Controller --> Throttler
+    Throttler --> Controller
     Controller --> ZodValidation
     ZodValidation --> UseCases
     UseCases --> Generator
     UseCases --> RepoPort
-    RepoPort --> RepoImpl
-    RepoImpl --> Mapper
-    RepoImpl --> DrizzleSchema
+    RepoPort --> CachedRepo
+    CachedRepo --> Redis
+    CachedRepo --> DrizzleRepo
+    DrizzleRepo --> Mapper
+    DrizzleRepo --> DrizzleSchema
     DrizzleSchema --> Postgres
     UseCases --> Presenter
 ```
 
 ### Fluxo interno
 
-1. controller recebe request
-2. schema Zod valida e sanitiza entrada
-3. use case executa regra
-4. repository resolve persistência via Drizzle
-5. presenter monta resposta HTTP estável
+1. Throttler verifica rate limit (Redis)
+2. controller recebe request
+3. schema Zod valida e sanitiza entrada
+4. use case executa regra
+5. repository resolve persistência (cache Redis em hit, Drizzle em miss)
+6. presenter monta resposta HTTP estável
 
 ## 9.4 Code Diagram simplificado
 
@@ -880,11 +888,13 @@ Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset
 
 # 16. Redis: onde usar e onde não usar
 
+**Implementado conforme ADR-00-14.**
+
 ## Usar Redis para
 
-- rate limit distribuído
-- eventual cache de leitura por `shortCode` se houver ganho real
-- contadores efêmeros apenas se surgir necessidade futura
+- rate limit distribuído (Throttler com `ThrottlerStorageRedisService`)
+- cache de leitura por `shortCode` (CachedShortUrlRepository, cache-aside)
+- health check (readiness inclui Redis)
 
 ## Não usar Redis para
 
@@ -892,11 +902,12 @@ Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset
 - substituir constraints do banco
 - esconder deficiência de modelagem
 
-## Estratégia inicial
+## Implementação atual
 
-- obrigatório para throttling distribuído
-- cache de leitura opcional, atrás de interface e com TTL curto
-- se Redis cair, o core da feature continua funcional, apenas com degradação controlada de capacidades auxiliares quando possível
+- **Throttler**: storage Redis, limites por rota (POST /shorten: 20/min, GET /shorten/:shortCode: 100/min)
+- **Cache**: `findByShortCode` com TTL configurável (`CACHE_TTL_SECONDS`), invalidação em PUT e DELETE
+- **Health**: `/health/ready` retorna `degraded` se Redis down
+- se Redis cair, cache retorna miss e vai ao DB; throttler pode degradar
 
 ---
 

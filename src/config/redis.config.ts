@@ -8,6 +8,7 @@ export type RedisConfig = {
   db: number;
   tlsEnabled: boolean;
   connectTimeoutMs: number;
+  cacheTtlSeconds: number;
 };
 
 export default registerAs('redis', (): RedisConfig => {
@@ -19,5 +20,6 @@ export default registerAs('redis', (): RedisConfig => {
     db: parsedEnv.REDIS_DB,
     tlsEnabled: parsedEnv.REDIS_TLS_ENABLED,
     connectTimeoutMs: parsedEnv.REDIS_CONNECT_TIMEOUT_MS,
+    cacheTtlSeconds: parsedEnv.CACHE_TTL_SECONDS,
   };
 });
