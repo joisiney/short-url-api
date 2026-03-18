@@ -2,7 +2,9 @@ import { defineConfig } from 'drizzle-kit';
 import { config } from 'dotenv';
 import { join } from 'path';
 
-config({ path: join(__dirname, '../../../.env') });
+const envFile =
+  process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+config({ path: join(__dirname, '../../../', envFile) });
 
 const host = process.env.DB_HOST || 'localhost';
 const port = process.env.DB_PORT || 5432;

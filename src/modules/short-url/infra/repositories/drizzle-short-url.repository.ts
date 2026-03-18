@@ -10,11 +10,15 @@ import { ShortCodeConflictError } from '../../domain/errors/short-code-conflict.
 const PG_UNIQUE_VIOLATION = '23505';
 
 function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const e = error as Record<string, unknown>;
+  if (e.code === PG_UNIQUE_VIOLATION) return true;
+  const cause = e.cause as unknown;
   return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as Record<string, unknown>).code === PG_UNIQUE_VIOLATION
+    typeof cause === 'object' &&
+    cause !== null &&
+    'code' in cause &&
+    (cause as Record<string, unknown>).code === PG_UNIQUE_VIOLATION
   );
 }
 

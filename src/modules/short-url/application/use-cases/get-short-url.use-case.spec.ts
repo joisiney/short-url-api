@@ -46,6 +46,7 @@ describe('GetShortUrlUseCase', () => {
       id: 'some-uuid',
       url: 'https://example.com',
       shortCode: 'abc123',
+      accessCount: 1,
     });
     expect(result.value?.createdAt).toBeInstanceOf(Date);
     expect(result.value?.updatedAt).toBeInstanceOf(Date);

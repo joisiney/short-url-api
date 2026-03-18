@@ -53,5 +53,21 @@ services:
       timeout: 5s
       retries: 5
 
+  create-test-db:
+    image: postgres:16-alpine
+    container_name: short-url-create-test-db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${DB_USER:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-Pg!Strong123}
+    command: >
+      sh -c "psql -d postgres -c \"SELECT 1 FROM pg_database WHERE datname = 'short_url_test'\" | grep -q 1
+      || psql -d postgres -c \"CREATE DATABASE short_url_test\""
+    restart: "no"
+
 volumes:
   postgres_data:
