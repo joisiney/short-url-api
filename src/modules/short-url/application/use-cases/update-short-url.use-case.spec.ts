@@ -1,0 +1,80 @@
+import { UpdateShortUrlUseCase } from './update-short-url.use-case';
+import { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
+import { ShortUrl } from '../../domain/entities/short-url.entity';
+import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+
+function makeShortUrl(overrides: Partial<ShortUrl> = {}): ShortUrl {
+  return new ShortUrl({
+    id: 'some-uuid',
+    url: 'https://example.com',
+    shortCode: 'abc123',
+    accessCount: 5,
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+    updatedAt: new Date('2026-01-02T00:00:00Z'),
+    ...overrides,
+  });
+}
+
+function makeRepository(
+  overrides: Partial<ShortUrlRepository> = {},
+): ShortUrlRepository {
+  return {
+    create: jest.fn(),
+    findByShortCode: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    incrementAccessCount: jest.fn(),
+    updateUrlByShortCode: jest.fn().mockResolvedValue(null),
+    deleteByShortCode: jest.fn(),
+    ...overrides,
+  };
+}
+
+describe('UpdateShortUrlUseCase', () => {
+  it('deve atualizar a URL original com sucesso usando o repositório especializado', async () => {
+    const updatedEntity = makeShortUrl({
+      url: 'https://updated.com',
+      updatedAt: new Date(),
+    });
+    const updateMock = jest.fn().mockResolvedValue(updatedEntity);
+    const repository = makeRepository({
+      updateUrlByShortCode: updateMock,
+    });
+    const useCase = new UpdateShortUrlUseCase(repository);
+
+    const result = await useCase.execute({
+      shortCode: 'abc123',
+      url: 'https://updated.com',
+    });
+
+    expect(result.url).toBe('https://updated.com');
+    expect(result.shortCode).toBe('abc123');
+    expect(updateMock).toHaveBeenCalledWith({
+      shortCode: 'abc123',
+      url: 'https://updated.com',
+    });
+  });
+
+  it('deve lançar ShortUrlNotFoundError quando o repositório retorna null (não encontrado)', async () => {
+    const repository = makeRepository({
+      updateUrlByShortCode: jest.fn().mockResolvedValue(null),
+    });
+    const useCase = new UpdateShortUrlUseCase(repository);
+
+    await expect(
+      useCase.execute({ shortCode: 'naoexiste', url: 'https://any.com' }),
+    ).rejects.toBeInstanceOf(ShortUrlNotFoundError);
+  });
+
+  it('deve propagar erro inesperado do repositório', async () => {
+    const unexpectedError = new Error('DB unavailable');
+    const repository = makeRepository({
+      updateUrlByShortCode: jest.fn().mockRejectedValue(unexpectedError),
+    });
+    const useCase = new UpdateShortUrlUseCase(repository);
+
+    await expect(
+      useCase.execute({ shortCode: 'abc123', url: 'https://any.com' }),
+    ).rejects.toBe(unexpectedError);
+  });
+});

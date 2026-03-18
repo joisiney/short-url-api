@@ -1,7 +1,21 @@
 import { Injectable, Inject } from '@nestjs/common';
+
 import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
 import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';
-import { ShortUrl } from '../../domain/entities/short-url.entity';
+import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+
+export type GetShortUrlStatsInput = {
+  shortCode: string;
+};
+
+export type GetShortUrlStatsOutput = {
+  id: string;
+  url: string;
+  shortCode: string;
+  createdAt: Date;
+  updatedAt: Date;
+  accessCount: number;
+};
 
 @Injectable()
 export class GetShortUrlStatsUseCase {
@@ -10,9 +24,23 @@ export class GetShortUrlStatsUseCase {
     private readonly shortUrlRepository: ShortUrlRepository,
   ) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  execute(_shortCode: string): ShortUrl {
-    // Stub — real logic implemented in ADR 00-08
-    throw new Error('Method not implemented.');
+  async execute(input: GetShortUrlStatsInput): Promise<GetShortUrlStatsOutput> {
+    const { shortCode } = input;
+
+    const shortUrl = await this.shortUrlRepository.findByShortCode(shortCode);
+
+    if (!shortUrl) {
+      throw new ShortUrlNotFoundError(shortCode);
+    }
+
+    // Pure read — does NOT increment accessCount (per ADR rule 1)
+    return {
+      id: shortUrl.id,
+      url: shortUrl.url,
+      shortCode: shortUrl.shortCode,
+      createdAt: shortUrl.createdAt,
+      updatedAt: shortUrl.updatedAt,
+      accessCount: shortUrl.accessCount,
+    };
   }
 }
