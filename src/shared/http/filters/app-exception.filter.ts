@@ -73,6 +73,7 @@ export class AppExceptionFilter implements ExceptionFilter {
 
     const payload: Record<string, unknown> = {
       code,
+      statusCode: status,
       message,
       requestId,
       correlationId,

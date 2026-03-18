@@ -16,21 +16,10 @@ describe('ShortUrlPresenter', () => {
       id: 'some-uuid',
       url: 'https://example.com',
       shortCode: 'abc123',
-      accessCount: 0,
       createdAt: base.createdAt.toISOString(),
       updatedAt: base.updatedAt.toISOString(),
     });
-  });
-
-  it('deve propagar accessCount quando presente no objeto de entrada', () => {
-    const withAccessCount = {
-      ...base,
-      accessCount: 10,
-    };
-
-    const result = ShortUrlPresenter.toResponse(withAccessCount);
-
-    expect(result.accessCount).toBe(10);
+    expect(result).not.toHaveProperty('accessCount');
   });
 
   it('deve mapear GetShortUrlStatsOutput para ShortUrlStatsResponse com datas em ISO', () => {
@@ -51,4 +40,3 @@ describe('ShortUrlPresenter', () => {
     });
   });
 });
-

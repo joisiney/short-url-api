@@ -2,8 +2,7 @@ import { defineConfig } from 'drizzle-kit';
 import { config } from 'dotenv';
 import { join } from 'path';
 
-const envFile =
-  process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
 config({ path: join(__dirname, '../../../', envFile) });
 
 const host = process.env.DB_HOST || 'localhost';
