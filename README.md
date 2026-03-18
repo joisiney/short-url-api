@@ -39,11 +39,25 @@ npm run typecheck
 ```
 
 ## Como rodar localmente
+
 1. Clone o repositório.
-2. Certifique-se de que a porta `3000` está livre (ou configure na variável de ambiente).
-3. Instale as dependências usando `npm install`.
-4. Inicie o projeto em modo dev `npm run start:dev`.
+2. Crie seu arquivo de ambiente:
+   - Para rodar via Docker Compose: `cp .env.docker.example .env`
+   - Para rodar sem Docker Compose: `cp .env.example .env`
+3. Inicie o ambiente completo com Docker Compose:
+   ```bash
+   docker compose up -d
+   ```
+4. A API estará acessível. Certifique-se de que a porta `3000` está livre.
 5. Acesse a documentação Swagger em http://localhost:3000/api/docs.
+
+### Como rodar localmente (sem Docker Compose para a API)
+1. Suba apenas as dependências (Banco e Redis):
+   ```bash
+   docker compose up -d postgres redis
+   ```
+2. Instale as dependências usando `npm install`.
+3. Inicie o projeto em modo dev `npm run start:dev`.
 
 **Observação:**
 Novos ADRs detalharão banco, domínio e infraestrutura. Atualmente o repositório encontra-se na fase de Bootstrap Inicial.
