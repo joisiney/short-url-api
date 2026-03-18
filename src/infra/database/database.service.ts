@@ -65,4 +65,15 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     this.logger.log('Encerrando pool de conexões do banco...');
     await this.pool.end();
   }
+
+  async isHealthy(): Promise<boolean> {
+    try {
+      const client = await this.pool.connect();
+      client.release();
+      return true;
+    } catch (error) {
+      this.logger.warn('Health check do banco falhou', error as Error);
+      return false;
+    }
+  }
 }
