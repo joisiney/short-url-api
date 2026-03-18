@@ -30,7 +30,9 @@ export class GetShortUrlStatsUseCase {
   ): Promise<Result<GetShortUrlStatsOutput, ShortUrlNotFoundError>> {
     const { shortCode } = input;
 
-    const shortUrl = await this.shortUrlRepository.findByShortCode(shortCode);
+    const shortUrl = await this.shortUrlRepository.findByShortCode(shortCode, {
+      skipCache: true,
+    });
 
     if (!shortUrl) {
       return ResultUtils.fail(new ShortUrlNotFoundError(shortCode));

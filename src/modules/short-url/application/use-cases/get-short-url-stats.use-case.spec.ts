@@ -46,7 +46,7 @@ describe('GetShortUrlStatsUseCase', () => {
     });
     expect(result.value?.createdAt).toBeInstanceOf(Date);
     expect(result.value?.updatedAt).toBeInstanceOf(Date);
-    expect(findMock).toHaveBeenCalledWith('abc123');
+    expect(findMock).toHaveBeenCalledWith('abc123', { skipCache: true });
   });
 
   it('não deve incrementar accessCount ao consultar estatísticas', async () => {

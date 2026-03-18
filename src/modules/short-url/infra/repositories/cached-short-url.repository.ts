@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
+import type {
+  ShortUrlRepository,
+  FindByShortCodeOptions,
+} from '../../domain/repositories/short-url.repository';
 import { ShortUrl } from '../../domain/entities/short-url.entity';
 import { DrizzleShortUrlRepository } from './drizzle-short-url.repository';
 import { RedisService } from '../../../../infra/redis/redis.service';
@@ -74,7 +77,14 @@ export class CachedShortUrlRepository implements ShortUrlRepository {
     return this.inner.create(shortUrl);
   }
 
-  async findByShortCode(shortCode: string): Promise<ShortUrl | null> {
+  async findByShortCode(
+    shortCode: string,
+    options?: FindByShortCodeOptions,
+  ): Promise<ShortUrl | null> {
+    if (options?.skipCache) {
+      return this.inner.findByShortCode(shortCode);
+    }
+
     const key = this.cacheKey(shortCode);
     const redis = this.redisService.getClient();
 

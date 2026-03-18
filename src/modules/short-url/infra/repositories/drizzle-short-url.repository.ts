@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
+import type {
+  ShortUrlRepository,
+  FindByShortCodeOptions,
+} from '../../domain/repositories/short-url.repository';
 import { ShortUrl } from '../../domain/entities/short-url.entity';
 import { DatabaseService } from '../../../../infra/database/database.service';
 import { shortUrls } from '../../../../infra/database/schema/short-urls.table';
@@ -42,7 +45,10 @@ export class DrizzleShortUrlRepository implements ShortUrlRepository {
     }
   }
 
-  async findByShortCode(shortCode: string): Promise<ShortUrl | null> {
+  async findByShortCode(
+    shortCode: string,
+    _options?: FindByShortCodeOptions,
+  ): Promise<ShortUrl | null> {
     const [record] = await this.db
       .select()
       .from(shortUrls)
@@ -63,8 +69,6 @@ export class DrizzleShortUrlRepository implements ShortUrlRepository {
       .where(eq(shortUrls.shortCode, shortCode))
       .execute();
   }
-
-  // --- Specialized Implementations for ADR-00-08 ---
 
   async updateUrlByShortCode(input: {
     shortCode: string;
