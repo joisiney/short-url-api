@@ -8,6 +8,7 @@ export interface FindByShortCodeOptions {
 
 export interface ShortUrlRepository {
   create(shortUrl: ShortUrl): Promise<void>;
+  findByUrl(url: string): Promise<ShortUrl | null>;
   findByShortCode(
     shortCode: string,
     options?: FindByShortCodeOptions,

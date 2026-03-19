@@ -28,6 +28,7 @@ export const shortUrls = pgTable(
   (table) => [
     primaryKey({ name: 'pk_short_urls', columns: [table.id] }),
     unique('uq_short_urls_short_code').on(table.shortCode),
+    unique('uq_short_urls_url').on(table.url),
     check(
       'ck_short_urls_access_count_non_negative',
       sql`${table.accessCount} >= 0`,

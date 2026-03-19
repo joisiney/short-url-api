@@ -19,14 +19,21 @@ describe('shortCodeSchema', () => {
     }
   });
 
-  it('deve rejeitar shortCode com mais de 7 caracteres', () => {
-    const longCode = 'a'.repeat(8);
+  it('deve aceitar shortCode com 8 caracteres', () => {
+    const result = shortCodeSchema.safeParse('abcdef12');
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBe('abcdef12');
+  });
+
+  it('deve rejeitar shortCode com mais de 8 caracteres', () => {
+    const longCode = 'a'.repeat(9);
     const result = shortCodeSchema.safeParse(longCode);
 
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0]?.message).toBe(
-        'Short code deve ter no maximo 7 caracteres',
+        'Short code deve ter no maximo 8 caracteres',
       );
     }
   });

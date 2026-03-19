@@ -77,6 +77,10 @@ export class CachedShortUrlRepository implements ShortUrlRepository {
     return this.inner.create(shortUrl);
   }
 
+  async findByUrl(url: string): Promise<ShortUrl | null> {
+    return this.inner.findByUrl(url);
+  }
+
   async findByShortCode(
     shortCode: string,
     options?: FindByShortCodeOptions,

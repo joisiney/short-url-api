@@ -30,6 +30,17 @@ export class CreateShortUrlUseCase {
   async execute(input: CreateShortUrlInput): Promise<CreateShortUrlOutput> {
     const { url } = input;
 
+    const existing = await this.shortUrlRepository.findByUrl(url);
+    if (existing) {
+      return {
+        id: existing.id,
+        url: existing.url,
+        shortCode: existing.shortCode,
+        createdAt: existing.createdAt,
+        updatedAt: existing.updatedAt,
+      };
+    }
+
     const id = await this.idGenerator.getNextId();
     const shortCode = this.base62Encoder.encode(id);
     const now = new Date();

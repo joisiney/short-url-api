@@ -20,6 +20,7 @@ function makeRepository(
 ): ShortUrlRepository {
   return {
     create: jest.fn(),
+    findByUrl: jest.fn(),
     findByShortCode: jest.fn().mockResolvedValue(null),
     incrementAccessCount: jest.fn().mockResolvedValue(undefined),
     updateUrlByShortCode: jest.fn(),

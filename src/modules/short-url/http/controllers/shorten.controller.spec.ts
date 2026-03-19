@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ConflictException } from '@nestjs/common';
 
 import { ShortenController } from './shorten.controller';
 import { CreateShortUrlUseCase } from '../../application/use-cases/create-short-url.use-case';
@@ -8,6 +8,7 @@ import { DeleteShortUrlUseCase } from '../../application/use-cases/delete-short-
 import { GetShortUrlStatsUseCase } from '../../application/use-cases/get-short-url-stats.use-case';
 import { ResultUtils } from '../../../../shared/utils/result';
 import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shortened.error';
 
 describe('ShortenController', () => {
   function makeSut() {
@@ -114,6 +115,20 @@ describe('ShortenController', () => {
     await expect(
       controller.update('missing', { url: 'https://any.com' }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deve_retornar_erro_conflict_quando_update_url_ja_encurtada', async () => {
+    const { controller, updateExecute } = makeSut();
+    const domainError = new UrlAlreadyShortenedError(
+      'https://already-shortened.com',
+    );
+    updateExecute.mockResolvedValue(ResultUtils.fail(domainError));
+
+    await expect(
+      controller.update('abc123', {
+        url: 'https://already-shortened.com',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('deve_executar_delete_quando_remove_sucesso', async () => {

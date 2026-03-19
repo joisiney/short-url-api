@@ -4,6 +4,7 @@ import { Result, ResultUtils } from '../../../../shared/utils/result';
 import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
 import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';
 import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shortened.error';
 
 export type UpdateShortUrlInput = {
   shortCode: string;
@@ -19,6 +20,10 @@ export type UpdateShortUrlOutput = {
   updatedAt: Date;
 };
 
+export type UpdateShortUrlError =
+  | ShortUrlNotFoundError
+  | UrlAlreadyShortenedError;
+
 @Injectable()
 export class UpdateShortUrlUseCase {
   constructor(
@@ -28,8 +33,13 @@ export class UpdateShortUrlUseCase {
 
   async execute(
     input: UpdateShortUrlInput,
-  ): Promise<Result<UpdateShortUrlOutput, ShortUrlNotFoundError>> {
+  ): Promise<Result<UpdateShortUrlOutput, UpdateShortUrlError>> {
     const { shortCode, url } = input;
+
+    const existingByUrl = await this.shortUrlRepository.findByUrl(url);
+    if (existingByUrl && existingByUrl.shortCode !== shortCode) {
+      return ResultUtils.fail(new UrlAlreadyShortenedError(url));
+    }
 
     const updatedShortUrl = await this.shortUrlRepository.updateUrlByShortCode({
       shortCode,

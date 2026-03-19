@@ -1,0 +1,1 @@
+ALTER TABLE "short_urls" ADD CONSTRAINT "uq_short_urls_url" UNIQUE("url");
