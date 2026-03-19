@@ -31,7 +31,7 @@ export function createTestDb() {
       });
     },
     async truncateShortUrls() {
-      await db.execute(sql`TRUNCATE TABLE short_urls RESTART IDENTITY CASCADE`);
+      await db.execute(sql`TRUNCATE TABLE short_urls CASCADE`);
     },
     async close() {
       await pool.end();

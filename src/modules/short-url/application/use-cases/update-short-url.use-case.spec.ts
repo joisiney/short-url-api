@@ -64,7 +64,7 @@ describe('UpdateShortUrlUseCase', () => {
     const useCase = new UpdateShortUrlUseCase(repository);
 
     const result = await useCase.execute({
-      shortCode: 'naoexiste',
+      shortCode: 'n0p3',
       url: 'https://any.com',
     });
 
