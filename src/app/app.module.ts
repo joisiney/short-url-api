@@ -21,6 +21,7 @@ import { HealthModule } from '../shared/health/health.module';
       useFactory: (redisService: RedisService) => ({
         throttlers: [{ ttl: 60_000, limit: 100 }],
         storage: new ThrottlerStorageRedisService(redisService.getClient()),
+        skipIf: () => process.env.NODE_ENV === 'test',
       }),
     }),
     HealthModule,
