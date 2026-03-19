@@ -3,8 +3,8 @@ import {
   text,
   varchar,
   integer,
+  bigint,
   timestamp,
-  uuid,
   unique,
   check,
   primaryKey,
@@ -14,7 +14,7 @@ import { sql } from 'drizzle-orm';
 export const shortUrls = pgTable(
   'short_urls',
   {
-    id: uuid('id').defaultRandom().notNull(),
+    id: bigint('id', { mode: 'number' }).notNull(),
     url: text('url').notNull(),
     shortCode: varchar('short_code', { length: 32 }).notNull(),
     accessCount: integer('access_count').notNull().default(0),
