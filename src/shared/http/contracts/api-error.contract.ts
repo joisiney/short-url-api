@@ -31,6 +31,13 @@ export class ApiError {
   correlationId?: string;
 
   @ApiProperty({
+    description: 'ID do trace OpenTelemetry (W3C)',
+    example: '4bf92f3577b34da6a3ce929d0e0e4736',
+    required: false,
+  })
+  traceId?: string;
+
+  @ApiProperty({
     description: 'Timestamp do erro no servidor',
     example: '2026-03-18T12:00:00.000Z',
   })

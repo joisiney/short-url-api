@@ -9,10 +9,14 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Response } from 'express';
 import { RequestContext } from './request-context.interceptor';
+import { redactForLog } from '../../utils/redact.util';
+import type { LoggerConfig } from '../../../config/logger.config';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
+
+  constructor(private readonly loggerConfig?: LoggerConfig) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<RequestContext>();
@@ -20,6 +24,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
     const requestId = request.requestId || '';
     const correlationId = request.correlationId || '';
+    const traceId = request.traceId;
     const method = request.method;
     const url = request.url;
     const userAgent = request.headers['user-agent'] || '';
@@ -29,7 +34,7 @@ export class LoggingInterceptor implements NestInterceptor {
       tap({
         next: () => {
           const durationMs = Date.now() - now;
-          const payload = {
+          const payload: Record<string, unknown> = {
             timestamp: new Date().toISOString(),
             level: 'info',
             context: 'HTTP',
@@ -42,7 +47,12 @@ export class LoggingInterceptor implements NestInterceptor {
             durationMs,
             userAgent,
           };
-          this.logger.log(JSON.stringify(payload));
+          if (traceId) payload.traceId = traceId;
+          const redacted = redactForLog(
+            payload,
+            this.loggerConfig?.redactSensitive ?? false,
+          );
+          this.logger.log(JSON.stringify(redacted));
         },
         error: (error: unknown) => {
           const durationMs = Date.now() - now;
@@ -52,7 +62,7 @@ export class LoggingInterceptor implements NestInterceptor {
               : 500;
           const message =
             error instanceof Error ? error.message : String(error);
-          const payload = {
+          const payload: Record<string, unknown> = {
             timestamp: new Date().toISOString(),
             level: 'error',
             context: 'HTTP',
@@ -66,7 +76,12 @@ export class LoggingInterceptor implements NestInterceptor {
             userAgent,
             errorMessage: message,
           };
-          this.logger.error(JSON.stringify(payload));
+          if (traceId) payload.traceId = traceId;
+          const redacted = redactForLog(
+            payload,
+            this.loggerConfig?.redactSensitive ?? false,
+          );
+          this.logger.error(JSON.stringify(redacted));
         },
       }),
     );

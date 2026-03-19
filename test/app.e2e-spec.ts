@@ -215,6 +215,34 @@ describe('API HTTP (e2e)', () => {
     });
   });
 
+  describe('Correlação (observabilidade)', () => {
+    it('deve retornar X-Request-Id em toda resposta', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`${prefix}/shorten`)
+        .send({ url: 'https://example.com' })
+        .expect(201);
+
+      expect(res.headers['x-request-id']).toBeDefined();
+      expect(res.headers['x-request-id']).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
+    });
+
+    it('deve retornar X-Trace-Id quando traceparent é enviado', async () => {
+      const traceId = '4bf92f3577b34da6a3ce929d0e0e4736';
+      const spanId = '00f067aa0ba902b7';
+      const traceparent = `00-${traceId}-${spanId}-01`;
+
+      const res = await request(app.getHttpServer())
+        .get(`${prefix}/shorten/n0p3`)
+        .set('traceparent', traceparent)
+        .expect(404);
+
+      expect(res.headers['x-request-id']).toBeDefined();
+      expect(res.headers['x-trace-id']).toBe(traceId);
+    });
+  });
+
   describe('Swagger/OpenAPI', () => {
     it('deve expor documentacao com endpoints da feature short-url', async () => {
       const res = await request(app.getHttpServer())

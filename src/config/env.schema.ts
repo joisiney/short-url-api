@@ -140,6 +140,17 @@ export const envSchema = z
     LOG_LEVEL: z.enum(['debug', 'log', 'warn', 'error']),
     LOG_PRETTY: booleanString,
     LOG_REDACT_SENSITIVE: booleanString,
+
+    // ── OpenTelemetry (opcional) ──────────────────────────────────────────────
+    OTEL_SERVICE_NAME: z
+      .string()
+      .optional()
+      .transform((v) => (v && v.trim() !== '' ? v.trim() : undefined)),
+    OTEL_EXPORTER_OTLP_ENDPOINT: z
+      .union([z.url(), z.literal('')])
+      .optional()
+      .transform((v) => (v === '' ? undefined : v)),
+    OTEL_TRACES_EXPORTER: z.enum(['otlp', 'none']).optional(),
   })
 
   // ── Refinamentos cruzados ──────────────────────────────────────────────────
