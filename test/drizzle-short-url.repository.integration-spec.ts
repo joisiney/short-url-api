@@ -67,6 +67,25 @@ describe('DrizzleShortUrlRepository (integration)', () => {
     expect(found?.url).toBe(shortUrl.url);
   });
 
+  it('deve buscar por url', async () => {
+    const shortUrl = makeShortUrl({
+      shortCode: 'by01',
+      url: 'https://specific-url.com',
+    });
+    await repository.create(shortUrl);
+
+    const found = await repository.findByUrl('https://specific-url.com');
+
+    expect(found).not.toBeNull();
+    expect(found?.shortCode).toBe('by01');
+    expect(found?.url).toBe('https://specific-url.com');
+  });
+
+  it('deve retornar null quando url nao existe', async () => {
+    const found = await repository.findByUrl('https://nonexistent.com');
+    expect(found).toBeNull();
+  });
+
   it('deve retornar null quando shortCode nao existe', async () => {
     const found = await repository.findByShortCode('n0p3');
     expect(found).toBeNull();

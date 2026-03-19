@@ -2,12 +2,14 @@ import { CreateShortUrlUseCase } from './create-short-url.use-case';
 import { IdGeneratorService } from '../services/id-generator.service';
 import { Base62EncoderService } from '../services/base62-encoder.service';
 import { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
+import { ShortUrl } from '../../domain/entities/short-url.entity';
 
 function makeRepository(
   overrides: Partial<ShortUrlRepository> = {},
 ): ShortUrlRepository {
   return {
     create: jest.fn().mockResolvedValue(undefined),
+    findByUrl: jest.fn().mockResolvedValue(null),
     findByShortCode: jest.fn(),
     incrementAccessCount: jest.fn(),
     updateUrlByShortCode: jest.fn(),
@@ -73,6 +75,39 @@ describe('CreateShortUrlUseCase', () => {
     const result = await useCase.execute({ url: 'https://example.com/path' });
 
     expect(result.createdAt.getTime()).toBe(result.updatedAt.getTime());
+  });
+
+  it('deve retornar shortCode existente quando URL ja foi encurtada (idempotente)', async () => {
+    const existingShortUrl = new ShortUrl({
+      id: '1',
+      url: 'https://example.com',
+      shortCode: 'abc12',
+      accessCount: 0,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-01-01'),
+    });
+    const findByUrlMock = jest.fn().mockResolvedValue(existingShortUrl);
+    const createMock = jest.fn().mockResolvedValue(undefined);
+    const repository = makeRepository({
+      findByUrl: findByUrlMock,
+      create: createMock,
+    });
+    const idGenerator = makeIdGenerator();
+    const base62Encoder = makeBase62Encoder();
+    const useCase = new CreateShortUrlUseCase(
+      repository,
+      idGenerator,
+      base62Encoder,
+    );
+
+    const result = await useCase.execute({ url: 'https://example.com' });
+
+    expect(result).toMatchObject({
+      url: 'https://example.com',
+      shortCode: 'abc12',
+    });
+    expect(findByUrlMock).toHaveBeenCalledWith('https://example.com');
+    expect(createMock).not.toHaveBeenCalled();
   });
 
   it('deve propagar erro do repositorio', async () => {

@@ -2,6 +2,7 @@ import { UpdateShortUrlUseCase } from './update-short-url.use-case';
 import { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
 import { ShortUrl } from '../../domain/entities/short-url.entity';
 import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shortened.error';
 
 function makeShortUrl(overrides: Partial<ShortUrl> = {}): ShortUrl {
   return new ShortUrl({
@@ -20,6 +21,7 @@ function makeRepository(
 ): ShortUrlRepository {
   return {
     create: jest.fn(),
+    findByUrl: jest.fn().mockResolvedValue(null),
     findByShortCode: jest.fn(),
     incrementAccessCount: jest.fn(),
     updateUrlByShortCode: jest.fn().mockResolvedValue(null),
@@ -55,6 +57,25 @@ describe('UpdateShortUrlUseCase', () => {
       shortCode: 'abc123',
       url: 'https://updated.com',
     });
+  });
+
+  it('deve retornar falha com UrlAlreadyShortenedError quando a nova URL ja pertence a outro shortCode', async () => {
+    const existingByUrl = makeShortUrl({
+      shortCode: 'other1',
+      url: 'https://already-shortened.com',
+    });
+    const repository = makeRepository({
+      findByUrl: jest.fn().mockResolvedValue(existingByUrl),
+    });
+    const useCase = new UpdateShortUrlUseCase(repository);
+
+    const result = await useCase.execute({
+      shortCode: 'abc123',
+      url: 'https://already-shortened.com',
+    });
+
+    expect(result.isFailure).toBe(true);
+    expect(result.error).toBeInstanceOf(UrlAlreadyShortenedError);
   });
 
   it('deve retornar falha com ShortUrlNotFoundError quando o repositório retorna null (não encontrado)', async () => {

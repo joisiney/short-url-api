@@ -22,6 +22,18 @@ export class DrizzleShortUrlRepository implements ShortUrlRepository {
     await this.db.insert(shortUrls).values(data).execute();
   }
 
+  async findByUrl(url: string): Promise<ShortUrl | null> {
+    const [record] = await this.db
+      .select()
+      .from(shortUrls)
+      .where(eq(shortUrls.url, url))
+      .execute();
+
+    if (!record) return null;
+
+    return ShortUrlPersistenceMapper.toDomain(record);
+  }
+
   async findByShortCode(
     shortCode: string,
     _options?: FindByShortCodeOptions,

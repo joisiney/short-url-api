@@ -89,6 +89,23 @@ describe('API HTTP (e2e)', () => {
       expect(res.body.error.code).toBeDefined();
       expect(res.body.error.message).toBeDefined();
     });
+
+    it('deve retornar mesmo shortCode ao reenviar mesma URL (idempotente)', async () => {
+      const url = 'https://idempotent-test.com';
+      const res1 = await request(app.getHttpServer())
+        .post(`${prefix}/shorten`)
+        .send({ url })
+        .expect(201);
+
+      const res2 = await request(app.getHttpServer())
+        .post(`${prefix}/shorten`)
+        .send({ url })
+        .expect(201);
+
+      expect(res1.body.shortCode).toBe(res2.body.shortCode);
+      expect(res1.body.url).toBe(url);
+      expect(res2.body.url).toBe(url);
+    });
   });
 
   describe('GET /shorten/:shortCode', () => {

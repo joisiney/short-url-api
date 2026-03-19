@@ -10,6 +10,7 @@ import {
   HttpStatus,
   UsePipes,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -47,15 +48,16 @@ import { ShortUrlStatsResponse } from '../contracts/short-url-stats.response';
 import { ShortUrlPresenter } from '../presenters/short-url.presenter';
 
 import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shortened.error';
 
 const SHORT_CODE_PARAM = {
   name: 'shortCode',
-  description: 'Identificador curto da URL (4 a 7 caracteres Base 62)',
+  description: 'Identificador curto da URL (4 a 8 caracteres Base 62)',
   example: 'WK2s',
   schema: {
     type: 'string',
     minLength: 4,
-    maxLength: 7,
+    maxLength: 8,
     pattern: '^[a-zA-Z0-9]+$',
   },
 } as const;
@@ -165,6 +167,11 @@ export class ShortenController {
     description: 'Not Found - short code inexistente',
   })
   @ApiResponse({
+    status: 409,
+    type: ApiErrorResponse,
+    description: 'Conflict - URL ja encurtada por outro shortCode',
+  })
+  @ApiResponse({
     status: 500,
     type: ApiErrorResponse,
     description: 'Internal Server Error - falha inesperada',
@@ -184,6 +191,12 @@ export class ShortenController {
       if (result.error instanceof ShortUrlNotFoundError) {
         throw new NotFoundException({
           code: 'SHORT_URL_NOT_FOUND',
+          message: result.error.message,
+        });
+      }
+      if (result.error instanceof UrlAlreadyShortenedError) {
+        throw new ConflictException({
+          code: 'URL_ALREADY_SHORTENED',
           message: result.error.message,
         });
       }
