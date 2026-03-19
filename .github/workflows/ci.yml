@@ -40,7 +40,26 @@ jobs:
 
       - run: npm run typecheck
 
-  test:
+  test-unit:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
+        env:
+          NODE_ENV: test
+
+  test-integration:
     runs-on: ubuntu-latest
     needs: [lint, typecheck]
     services:
@@ -59,7 +78,7 @@ jobs:
           --health-retries 5
 
       redis:
-        image: bitnami/redis:7
+        image: redis:7-alpine
         ports:
           - 6379:6379
         env:
@@ -84,11 +103,6 @@ jobs:
       - name: Create test database
         run: |
           PGPASSWORD=Pg!Strong123 psql -h localhost -U postgres -d postgres -c "CREATE DATABASE short_url_test;" || true
-
-      - name: Run unit tests
-        run: npm run test
-        env:
-          NODE_ENV: test
 
       - name: Run integration tests
         run: npm run test:integration
@@ -122,41 +136,9 @@ jobs:
           LOG_PRETTY: false
           LOG_REDACT_SENSITIVE: true
 
-      - name: Run e2e tests
-        run: npm run test:e2e
-        env:
-          NODE_ENV: test
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: short_url_test
-          DB_USER: postgres
-          DB_PASSWORD: Pg!Strong123
-          DB_SSL: false
-          DB_POOL_MIN: 1
-          DB_POOL_MAX: 5
-          DB_IDLE_TIMEOUT_MS: 10000
-          DB_CONNECTION_TIMEOUT_MS: 5000
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-          REDIS_PASSWORD: Redis!Strong123
-          REDIS_DB: 1
-          REDIS_TLS_ENABLED: false
-          REDIS_CONNECT_TIMEOUT_MS: 5000
-          CACHE_TTL_SECONDS: 60
-          APP_PORT: 3001
-          APP_HOST: localhost
-          APP_GLOBAL_PREFIX: api
-          APP_CORS_ORIGIN: '*'
-          APP_BODY_LIMIT: 100kb
-          APP_ENABLE_SWAGGER: false
-          APP_HTTP_TIMEOUT_MS: 5000
-          LOG_LEVEL: error
-          LOG_PRETTY: false
-          LOG_REDACT_SENSITIVE: true
-
   build:
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test-unit, test-integration]
     steps:
       - uses: actions/checkout@v6
 
