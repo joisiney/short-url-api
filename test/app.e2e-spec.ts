@@ -186,6 +186,35 @@ describe('API HTTP (e2e)', () => {
     });
   });
 
+  describe('Security Input Guard (XSS)', () => {
+    it('deve rejeitar body com payload XSS (script tag)', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`${prefix}/shorten`)
+        .send({ url: 'https://example.com/<script>alert(1)</script>' })
+        .expect(400);
+
+      expect(res.body.error.code).toBe('SECURITY_INPUT_REJECTED');
+      expect(res.body.error.details).toBeDefined();
+      expect(res.body.error.details[0].reason).toBe('script_tag_detected');
+    });
+
+    it('deve rejeitar body com javascript: protocol', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`${prefix}/shorten`)
+        .send({ url: 'javascript:alert(1)' })
+        .expect(400);
+
+      expect(res.body.error.code).toBe('SECURITY_INPUT_REJECTED');
+    });
+
+    it('deve aceitar payload limpo', async () => {
+      await request(app.getHttpServer())
+        .post(`${prefix}/shorten`)
+        .send({ url: 'https://example.com/path?foo=bar' })
+        .expect(201);
+    });
+  });
+
   describe('Swagger/OpenAPI', () => {
     it('deve expor documentacao com endpoints da feature short-url', async () => {
       const res = await request(app.getHttpServer())

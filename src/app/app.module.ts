@@ -8,6 +8,7 @@ import { DatabaseModule } from '../infra/database/database.module';
 import { RedisModule } from '../infra/redis/redis.module';
 import { RedisService } from '../infra/redis/redis.service';
 import { HealthModule } from '../shared/health/health.module';
+import { SecurityInputGuard } from '../shared/http/guards/security-input.guard';
 
 @Module({
   imports: [
@@ -27,6 +28,10 @@ import { HealthModule } from '../shared/health/health.module';
     HealthModule,
   ],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: SecurityInputGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
