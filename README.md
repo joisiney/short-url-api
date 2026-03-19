@@ -79,6 +79,7 @@ flowchart LR
     User[Cliente API / Frontend] --> API[URL Shortening API]
     API --> PG[(PostgreSQL)]
     API --> Redis[(Redis)]
+    API -.->|OTLP traces| OTel[Backend Observabilidade]
     Dev[Developer] --> Swagger[Swagger / OpenAPI]
     Swagger --> API
 ```
@@ -91,18 +92,22 @@ flowchart TB
     NestApi[NestJS API Container]
     Postgres[(PostgreSQL Container)]
     Redis[(Redis Container)]
+    OTelCollector[OTLP Collector / Jaeger / Tempo]
     Obs[Logs / Metrics / Healthchecks]
 
     Client --> ReverseProxy
     ReverseProxy --> NestApi
     NestApi --> Postgres
     NestApi --> Redis
+    NestApi -.->|OTLP traces| OTelCollector
     NestApi --> Obs
 ```
 
 ### 3. Diagrama de Componente (Módulo: `short-url`)
 ```mermaid
 flowchart LR
+    RequestContext[RequestContextInterceptor]
+    Logging[LoggingInterceptor]
     Controller[Controllers]
     Throttler[ThrottlerGuard]
     ZodValidation[Zod Validation Pipe/Layer]
@@ -116,9 +121,11 @@ flowchart LR
     DrizzleSchema[Drizzle Schema]
     Postgres[(PostgreSQL)]
     Presenter[Presenters]
+    OTel[OpenTelemetry SDK]
 
-    Controller --> Throttler
-    Throttler --> Controller
+    Throttler --> RequestContext
+    RequestContext --> Logging
+    Logging --> Controller
     Controller --> ZodValidation
     ZodValidation --> UseCases
     UseCases --> Generator
@@ -130,20 +137,26 @@ flowchart LR
     DrizzleRepo --> DrizzleSchema
     DrizzleSchema --> Postgres
     UseCases --> Presenter
+    RequestContext -.->|trace-id| OTel
+    Logging -.->|correlacao| OTel
 ```
 
 ### 4. Fluxo Interno da Aplicação (Code Diagram)
 ```mermaid
 flowchart TD
-    A[HTTP Request] --> B[Controller]
-    B --> C[Validation Layer Zod]
-    C --> D[Use Case]
-    D --> E[Domain Rules]
-    D --> F[Repository Port]
-    F --> G[Drizzle Repository]
-    G --> H[(PostgreSQL)]
-    D --> I[Presenter]
-    I --> J[HTTP Response]
+    A[HTTP Request] --> B[RequestContext trace-id/request-id]
+    B --> C[Logging Interceptor]
+    C --> D[Controller]
+    D --> E[Validation Layer Zod]
+    E --> F[Use Case]
+    F --> G[Domain Rules]
+    F --> H[Repository Port]
+    H --> I[Drizzle Repository]
+    I --> J[(PostgreSQL)]
+    F --> K[Presenter]
+    K --> L[HTTP Response X-Trace-Id X-Request-Id]
+    B -.->|W3C Trace Context| OTel[OTel SDK]
+    C -.->|logs estruturados| OTel
 ```
 
 ## Modelo de Dados (ER)
@@ -174,6 +187,32 @@ O projeto adotou as seguintes práticas visando controle de concorrência massiv
 - **Segurança Intransigente de Entrada:** Um Guard global inspeciona `body`, `params`, `query` e headers customizados e rejeita com `HTTP 400` qualquer payload suspeito. Cobertura: XSS (incluindo bypass por encoding URL e entidades HTML), data: URI perigosos (`text/html`, `text/javascript`, `image/svg+xml`), SQLi como defesa em profundidade. Headers padrao (Authorization, Content-Type, etc.) sao ignorados para reduzir falsos positivos.
 - **Gatekeeper Rigoroso (Zod):** Schemas Zod validam o contrato de entrada por endpoint (tipo, formato e regras de domínio) antes da execução dos Use Cases.
 - **Query Builds Seguras e Tratamento Drizzle:** Proteção contra SQL injections nativamente implementadas no uso restrito dos Query Builders. Não utilizamos concatenações abertas para evitar execução indevida. O Drizzle mapeia apenas tabelas autorizadas na memória e oculta relatórios de erro do DB.
+
+## Observabilidade (compliance e rastreabilidade)
+
+A observabilidade foi pensada desde o início: instrumentar cedo evita retrabalho quando compliance ou escala exigirem rastreabilidade completa. A escolha por OpenTelemetry (padrão CNCF) garante portabilidade - não ficamos presos a um fornecedor.
+
+**Por que OpenTelemetry**
+- Padrão aberto, sem lock-in; instrumentação pronta para qualquer consumidor OTLP.
+- Decisão de backend (SaaS vs self-hosted) pode ser tomada depois, com base em custo e política de dados.
+
+**Realidade da persistência**
+
+| Cenário | Valor |
+|---------|-------|
+| Sem backend OTLP e sem agregação de logs | Limitado: correlação apenas durante a vida do request |
+| Sem backend OTLP, com agregação de logs (CloudWatch, Loki, etc.) | Médio: logs com request-id permitem busca e correlação |
+| Com backend OTLP configurado | Completo: traces persistidos, rastreabilidade ponta a ponta |
+
+A instrumentação é carregada via `-r ./dist/instrumentation.js` antes do bootstrap NestJS (`start:prod`). O valor pleno depende de conectar um consumidor (OTLP ou agregação de logs).
+
+**Consumidores compatíveis** (via OTLP): OpenTelemetry Collector, Jaeger, Grafana Tempo; SaaS: Datadog, Honeycomb, New Relic, SigNoz. Basta configurar `OTEL_EXPORTER_OTLP_ENDPOINT`.
+
+**Detalhes técnicos**
+- **Correlação**: trace-id (W3C) e request-id em logs estruturados e headers de resposta (`X-Trace-Id`, `X-Request-Id`).
+- **Eventos auditáveis**: criação, atualização, exclusão e acesso a short URLs; erros HTTP 4xx/5xx. A auditoria é feita via correlação de logs estruturados (method, path, statusCode) e traces automáticos.
+- **Governança**: mascaramento de dados sensíveis via `LOG_REDACT_SENSITIVE`; retenção e acesso definidos pelo backend de telemetria (SaaS ou self-hosted).
+- **Variáveis opcionais**: `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_EXPORTER` (none para desabilitar).
 
 ## Estrutura do projeto
 
@@ -239,7 +278,7 @@ npm run start:dev
 | `docker compose down` | Derruba ambiente |
 | `npm run start:dev` | App em modo dev (watch) |
 | `npm run build` | Build de produção |
-| `npm run start:prod` | Executa build (node dist) |
+| `npm run start:prod` | Executa build com instrumentação OpenTelemetry (`-r ./dist/instrumentation.js`) |
 | `npm run format` | Prettier (formata arquivos) |
 | `npm run format:check` | Prettier (valida sem alterar) |
 | `npm run lint` | ESLint (validação) |
