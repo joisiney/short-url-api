@@ -251,6 +251,10 @@ npm run start:dev
 | `npm run db:generate` | Gera migration a partir do schema |
 | `npm run db:migrate` | Aplica migrations pendentes |
 | `npm run db:create-test` | Cria banco `short_url_test` (para testes) |
+| `npm run clear` | Remove artefatos locais (`node_modules`, `dist`, `coverage*`) |
+| `npm run reset` | Executa `clear` e remove `package-lock.json` |
+
+White flag: os scripts `clear` e `reset` usam Node (`node -e`) em vez de shell para manter comportamento consistente entre sistemas operacionais e evitar variações de comando entre Linux/macOS/Windows.
 
 ## Redis
 
