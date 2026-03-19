@@ -78,6 +78,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       requestId,
       correlationId,
       timestamp: new Date().toISOString(),
+      ...(request.traceId && { traceId: request.traceId }),
       ...(details !== undefined && { details }),
     };
 

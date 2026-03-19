@@ -8,6 +8,7 @@ import { json } from 'express';
 
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppConfig } from '../config/app.config';
+import type { LoggerConfig } from '../config/logger.config';
 
 import { AppExceptionFilter } from '../shared/http/filters/app-exception.filter';
 import { RequestContextInterceptor } from '../shared/http/interceptors/request-context.interceptor';
@@ -24,11 +25,13 @@ export async function bootstrap() {
     throw new Error('A configuração do app falhou ao carregar');
   }
 
+  const loggerConfig = configService.get<LoggerConfig>('logger');
+
   // Global HTTP Shared Base
   app.useGlobalFilters(new AppExceptionFilter());
   app.useGlobalInterceptors(
     new RequestContextInterceptor(),
-    new LoggingInterceptor(),
+    new LoggingInterceptor(loggerConfig),
     new TimeoutInterceptor(configService),
   );
 
