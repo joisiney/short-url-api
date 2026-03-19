@@ -32,9 +32,9 @@ describe('Concorrencia (integration)', () => {
 
   it('deve incrementar accessCount corretamente em acessos concorrentes', async () => {
     const shortUrl = new ShortUrl({
-      id: crypto.randomUUID(),
+      id: '14000000',
       url: 'https://example.com',
-      shortCode: 'concurrent1',
+      shortCode: 'conc1',
       accessCount: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -43,19 +43,19 @@ describe('Concorrencia (integration)', () => {
 
     const concurrency = 50;
     const promises = Array.from({ length: concurrency }, () =>
-      repository.incrementAccessCount('concurrent1'),
+      repository.incrementAccessCount('conc1'),
     );
     await Promise.all(promises);
 
-    const found = await repository.findByShortCode('concurrent1');
+    const found = await repository.findByShortCode('conc1');
     expect(found?.accessCount).toBe(concurrency);
   });
 
-  it('deve tratar colisao de shortCode durante criacao com retry', async () => {
+  it('deve rejeitar criacao com shortCode duplicado', async () => {
     const shortUrl = new ShortUrl({
-      id: crypto.randomUUID(),
+      id: '14000000',
       url: 'https://example.com',
-      shortCode: 'collision1',
+      shortCode: 'col1',
       accessCount: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -63,9 +63,9 @@ describe('Concorrencia (integration)', () => {
     await repository.create(shortUrl);
 
     const duplicate = new ShortUrl({
-      id: crypto.randomUUID(),
+      id: '14000001',
       url: 'https://other.com',
-      shortCode: 'collision1',
+      shortCode: 'col1',
       accessCount: 0,
       createdAt: new Date(),
       updatedAt: new Date(),

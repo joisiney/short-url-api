@@ -112,7 +112,7 @@ describe('API HTTP (e2e)', () => {
 
     it('deve retornar 404 quando shortCode nao existe', async () => {
       const res = await request(app.getHttpServer())
-        .get(`${prefix}/shorten/naoexiste`)
+        .get(`${prefix}/shorten/n0p3`)
         .expect(404);
 
       expect(res.body.error).toBeDefined();
@@ -142,7 +142,7 @@ describe('API HTTP (e2e)', () => {
 
     it('deve retornar 404 quando shortCode nao existe', async () => {
       const res = await request(app.getHttpServer())
-        .put(`${prefix}/shorten/naoexiste`)
+        .put(`${prefix}/shorten/n0p3`)
         .send({ url: 'https://any.com' })
         .expect(404);
 
@@ -164,7 +164,7 @@ describe('API HTTP (e2e)', () => {
 
     it('deve retornar 404 quando shortCode nao existe', async () => {
       await request(app.getHttpServer())
-        .delete(`${prefix}/shorten/naoexiste`)
+        .delete(`${prefix}/shorten/n0p3`)
         .expect(404);
     });
   });
@@ -212,7 +212,7 @@ describe('API HTTP (e2e)', () => {
 
     it('deve retornar 404 quando shortCode nao existe', async () => {
       const res = await request(app.getHttpServer())
-        .get(`${prefix}/shorten/naoexiste/stats`)
+        .get(`${prefix}/shorten/n0p3/stats`)
         .expect(404);
 
       expect(res.body.error.code).toBe('SHORT_URL_NOT_FOUND');

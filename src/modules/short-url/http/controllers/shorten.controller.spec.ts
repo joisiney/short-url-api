@@ -1,8 +1,4 @@
-jest.mock('nanoid', () => ({
-  customAlphabet: () => () => 'mocked-code',
-}));
-
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 
 import { ShortenController } from './shorten.controller';
 import { CreateShortUrlUseCase } from '../../application/use-cases/create-short-url.use-case';
@@ -12,7 +8,6 @@ import { DeleteShortUrlUseCase } from '../../application/use-cases/delete-short-
 import { GetShortUrlStatsUseCase } from '../../application/use-cases/get-short-url-stats.use-case';
 import { ResultUtils } from '../../../../shared/utils/result';
 import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
-import { ShortCodeGenerationExhaustedError } from '../../domain/errors/short-code-generation-exhausted.error';
 
 describe('ShortenController', () => {
   function makeSut() {
@@ -72,7 +67,7 @@ describe('ShortenController', () => {
 
   it('deve_retornar_short_url_quando_create_sucesso', async () => {
     const { controller, createExecute } = makeSut();
-    createExecute.mockResolvedValue(ResultUtils.ok(baseOutput));
+    createExecute.mockResolvedValue(baseOutput);
 
     const result = await controller.create({ url: 'https://example.com' });
 
@@ -84,16 +79,6 @@ describe('ShortenController', () => {
       url: baseOutput.url,
       shortCode: baseOutput.shortCode,
     });
-  });
-
-  it('deve_retornar_erro_conflict_quando_create_exaurir_tentativas', async () => {
-    const { controller, createExecute } = makeSut();
-    const domainError = new ShortCodeGenerationExhaustedError(5);
-    createExecute.mockResolvedValue(ResultUtils.fail(domainError));
-
-    await expect(
-      controller.create({ url: 'https://example.com' }),
-    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('deve_retornar_erro_not_found_quando_findOne_nao_encontrar', async () => {

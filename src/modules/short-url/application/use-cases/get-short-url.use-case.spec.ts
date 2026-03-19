@@ -63,7 +63,7 @@ describe('GetShortUrlUseCase', () => {
     });
     const useCase = new GetShortUrlUseCase(repository);
 
-    const result = await useCase.execute({ shortCode: 'naoexiste' });
+    const result = await useCase.execute({ shortCode: 'n0p3' });
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(ShortUrlNotFoundError);

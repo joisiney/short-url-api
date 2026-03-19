@@ -3,7 +3,6 @@ import { ConfigModule } from '../src/config/config.module';
 import { DatabaseModule } from '../src/infra/database/database.module';
 import { DrizzleShortUrlRepository } from '../src/modules/short-url/infra/repositories/drizzle-short-url.repository';
 import { ShortUrl } from '../src/modules/short-url/domain/entities/short-url.entity';
-import { ShortCodeConflictError } from '../src/modules/short-url/domain/errors/short-code-conflict.error';
 import { createTestDb } from './helpers/db-test.helper';
 
 describe('DrizzleShortUrlRepository (integration)', () => {
@@ -30,11 +29,14 @@ describe('DrizzleShortUrlRepository (integration)', () => {
     await testDb.close();
   });
 
+  let nextId = 14_000_000;
+
   function makeShortUrl(overrides: Partial<ShortUrl> = {}): ShortUrl {
+    const id = String(nextId++);
     return new ShortUrl({
-      id: crypto.randomUUID(),
+      id,
       url: 'https://example.com',
-      shortCode: 'abc123',
+      shortCode: `sc${id.slice(-4)}`,
       accessCount: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -43,22 +45,22 @@ describe('DrizzleShortUrlRepository (integration)', () => {
   }
 
   it('deve criar short URL com sucesso', async () => {
-    const shortUrl = makeShortUrl({ shortCode: 'create01' });
+    const shortUrl = makeShortUrl({ shortCode: 'cr01' });
 
     await repository.create(shortUrl);
 
-    const found = await repository.findByShortCode('create01');
+    const found = await repository.findByShortCode('cr01');
     expect(found).not.toBeNull();
     expect(found?.url).toBe('https://example.com');
-    expect(found?.shortCode).toBe('create01');
+    expect(found?.shortCode).toBe('cr01');
     expect(found?.accessCount).toBe(0);
   });
 
   it('deve buscar por shortCode', async () => {
-    const shortUrl = makeShortUrl({ shortCode: 'find01' });
+    const shortUrl = makeShortUrl({ shortCode: 'fd01' });
     await repository.create(shortUrl);
 
-    const found = await repository.findByShortCode('find01');
+    const found = await repository.findByShortCode('fd01');
 
     expect(found).not.toBeNull();
     expect(found?.id).toBe(shortUrl.id);
@@ -66,73 +68,60 @@ describe('DrizzleShortUrlRepository (integration)', () => {
   });
 
   it('deve retornar null quando shortCode nao existe', async () => {
-    const found = await repository.findByShortCode('naoexiste');
+    const found = await repository.findByShortCode('n0p3');
     expect(found).toBeNull();
   });
 
   it('deve atualizar URL por shortCode', async () => {
-    const shortUrl = makeShortUrl({ shortCode: 'update01' });
+    const shortUrl = makeShortUrl({ shortCode: 'up01' });
     await repository.create(shortUrl);
 
     const updated = await repository.updateUrlByShortCode({
-      shortCode: 'update01',
+      shortCode: 'up01',
       url: 'https://updated.com',
     });
 
     expect(updated).not.toBeNull();
     expect(updated?.url).toBe('https://updated.com');
-    expect(updated?.shortCode).toBe('update01');
+    expect(updated?.shortCode).toBe('up01');
     expect(updated?.accessCount).toBe(0);
   });
 
   it('deve retornar null ao atualizar shortCode inexistente', async () => {
     const updated = await repository.updateUrlByShortCode({
-      shortCode: 'naoexiste',
+      shortCode: 'n0p3',
       url: 'https://any.com',
     });
     expect(updated).toBeNull();
   });
 
   it('deve deletar por shortCode', async () => {
-    const shortUrl = makeShortUrl({ shortCode: 'delete01' });
+    const shortUrl = makeShortUrl({ shortCode: 'dl01' });
     await repository.create(shortUrl);
 
-    const deleted = await repository.deleteByShortCode('delete01');
+    const deleted = await repository.deleteByShortCode('dl01');
 
     expect(deleted).toBe(true);
-    const found = await repository.findByShortCode('delete01');
+    const found = await repository.findByShortCode('dl01');
     expect(found).toBeNull();
   });
 
   it('deve retornar false ao deletar shortCode inexistente', async () => {
-    const deleted = await repository.deleteByShortCode('naoexiste');
+    const deleted = await repository.deleteByShortCode('n0p3');
     expect(deleted).toBe(false);
   });
 
   it('deve incrementar accessCount', async () => {
-    const shortUrl = makeShortUrl({ shortCode: 'incr01', accessCount: 0 });
+    const shortUrl = makeShortUrl({ shortCode: 'in01', accessCount: 0 });
     await repository.create(shortUrl);
 
-    await repository.incrementAccessCount('incr01');
-    const after1 = await repository.findByShortCode('incr01');
+    await repository.incrementAccessCount('in01');
+    const after1 = await repository.findByShortCode('in01');
     expect(after1?.accessCount).toBe(1);
 
-    await repository.incrementAccessCount('incr01');
-    const after2 = await repository.findByShortCode('incr01');
+    await repository.incrementAccessCount('in01');
+    const after2 = await repository.findByShortCode('in01');
     expect(after2?.accessCount).toBe(2);
   });
 
-  it('deve lancar ShortCodeConflictError ao criar shortCode duplicado', async () => {
-    const shortUrl = makeShortUrl({ shortCode: 'dup01' });
-    await repository.create(shortUrl);
-
-    const duplicate = makeShortUrl({
-      shortCode: 'dup01',
-      id: crypto.randomUUID(),
-    });
-
-    await expect(repository.create(duplicate)).rejects.toThrow(
-      ShortCodeConflictError,
-    );
-  });
 });
