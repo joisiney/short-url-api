@@ -28,6 +28,8 @@
     "db:generate": "drizzle-kit generate --config=src/infra/database/drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=src/infra/database/drizzle.config.ts",
     "db:create-test": "docker compose run --rm create-test-db",
+    "clear": "node -e \"const { rmSync } = require('node:fs'); ['node_modules', 'dist', 'coverage', 'coverage-e2e', 'coverage-integration'].forEach((path) => rmSync(path, { recursive: true, force: true }));\"",
+    "reset": "npm run clear && node -e \"const { rmSync } = require('node:fs'); rmSync('package-lock.json', { force: true });\"",
     "prepare": "husky"
   },
   "dependencies": {
