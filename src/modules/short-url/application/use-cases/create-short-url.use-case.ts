@@ -1,5 +1,4 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { ResultUtils } from '../../../../shared/utils/result';
 
 import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
 import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';

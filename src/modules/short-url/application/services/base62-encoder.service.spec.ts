@@ -28,10 +28,14 @@ describe('Base62EncoderService', () => {
   });
 
   it('deve lancar erro para ID negativo', () => {
-    expect(() => service.encode(-1)).toThrow('O ID deve ser um inteiro nao negativo');
+    expect(() => service.encode(-1)).toThrow(
+      'O ID deve ser um inteiro nao negativo',
+    );
   });
 
   it('deve lancar erro para ID nao inteiro', () => {
-    expect(() => service.encode(1.5)).toThrow('O ID deve ser um inteiro nao negativo');
+    expect(() => service.encode(1.5)).toThrow(
+      'O ID deve ser um inteiro nao negativo',
+    );
   });
 });
