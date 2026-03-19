@@ -19,13 +19,43 @@ Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto 
 - Docker Compose
 - Redis
 
-## Funcionalidades
+## Requisitos
 
+### Funcionais
 - Criar short URL
 - Obter URL original por short code
 - Atualizar short URL
 - Deletar short URL
 - Consultar estatísticas de acesso
+
+### Não funcionais
+- Rate limit: 2 req/min por IP em POST /shorten e GET /shorten/:shortCode (Throttler + Redis)
+- Cache Redis para consultas por shortCode; invalidação em PUT e DELETE
+- Validação Zod em payloads; schemas strict
+- Throttler distribuído via Redis (contador compartilhado entre instâncias)
+
+### Detalhes críticos (evitar dor de cabeça)
+- **Proxy**: Se a API estiver atrás de proxy (nginx, load balancer), configurar `trust proxy` no adapter HTTP para que o IP real venha de `X-Forwarded-For`. Sem isso, todos os clientes são vistos como o mesmo IP (o do proxy) e o rate limit não funciona por usuário.
+- **Redis para rate limit**: Se Redis cair, o Throttler pode degradar; cache retorna miss e vai ao DB.
+
+### Regras de negócio
+
+**Aplicadas no código**
+- URL válida (formato URI) em POST e PUT; validação Zod
+- ShortCode único: gerado por ID sequencial (Redis INCR) + Base62; constraint UNIQUE no banco
+- ShortCode 4-7 caracteres, apenas alfanuméricos; validado em parâmetros
+- accessCount nunca negativo (check constraint); incremento atômico no DB
+- Cache invalidado em PUT e DELETE
+
+**Não aplicadas (podem causar dúvidas)**
+- Mesma URL pode gerar vários shortCodes; não há deduplicação por URL
+- URL não é normalizada: `https://example.com`, `https://example.com/` e `https://www.example.com` são tratadas como distintas
+- Sem autenticação: qualquer um pode criar, editar e deletar qualquer shortCode
+
+**Melhorias de requisitos (a implementar)**
+- Deduplicação: retornar shortCode existente quando a URL já foi encurtada
+- Normalização de URL antes de criar/atualizar
+- Autenticação/autorização para operações de escrita (PUT, DELETE)
 
 ## Arquitetura e Soluções
 
@@ -165,10 +195,7 @@ Organização por feature/domínio. Regras de negócio nos use cases; controller
 
 ## Como subir localmente
 
-1. Copie o env:
-   ```bash
-   cp .env.example .env
-   ```
+1. Configure o env (ver seção anterior).
 2. Instale dependências (necessário para migrations e comandos locais):
    ```bash
    npm install
@@ -219,7 +246,7 @@ npm run start:dev
 
 O Redis e usado para **cache** e **seguranca**:
 
-- **Rate limit distribuido**: Throttler com storage Redis; limites por rota (POST /shorten: 20 req/min, GET /shorten/:shortCode: 100 req/min)
+- **Rate limit distribuido**: Throttler com storage Redis; 2 req/min por IP em POST /shorten e GET /shorten/:shortCode
 - **Cache**: consultas `findByShortCode` cacheadas com TTL configurável (`CACHE_TTL_SECONDS`); invalidacao em PUT e DELETE
 - **Health**: `/health/ready` inclui Redis; retorna `degraded` se Redis estiver down
 
