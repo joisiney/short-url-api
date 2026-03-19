@@ -34,6 +34,15 @@ Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto 
 - Validação Zod em payloads; schemas strict
 - Throttler distribuído via Redis (contador compartilhado entre instâncias)
 
+### Análise técnica de capacidade
+Com a arquitetura proposta utilizando PostgreSQL, o limite seguro de armazenamento comporta até 1,75 milhão de registros (3 KB/linha), o que representa aproximadamente 958 inserções por dia ao longo de 5 anos. A partir deste horizonte, recomenda-se adotar uma das seguintes abordagens:
+
+• Migrar para um banco com escala horizontal (MongoDB Cluster, Cassandra, DynamoDB)
+• Implementar expiração automática de registros, com padrão de 3 anos
+• Remover registros antigos periodicamente via job agendado
+• Particionar a tabela por data (table partitioning nativo do PostgreSQL)
+• Arquivar registros frios em armazenamento barato (S3 + Athena)
+
 ### Detalhes críticos (evitar dor de cabeça)
 - **Proxy**: Se a API estiver atrás de proxy (nginx, load balancer), configurar `trust proxy` no adapter HTTP para que o IP real venha de `X-Forwarded-For`. Sem isso, todos os clientes são vistos como o mesmo IP (o do proxy) e o rate limit não funciona por usuário.
 - **Redis para rate limit**: Se Redis cair, o Throttler pode degradar; cache retorna miss e vai ao DB.
