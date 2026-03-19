@@ -8,22 +8,6 @@ import { DatabaseService } from '../../../../infra/database/database.service';
 import { shortUrls } from '../../../../infra/database/schema/short-urls.table';
 import { eq, sql } from 'drizzle-orm';
 import { ShortUrlPersistenceMapper } from '../mappers/short-url.persistence-mapper';
-import { ShortCodeConflictError } from '../../domain/errors/short-code-conflict.error';
-
-const PG_UNIQUE_VIOLATION = '23505';
-
-function isUniqueViolation(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false;
-  const e = error as Record<string, unknown>;
-  if (e.code === PG_UNIQUE_VIOLATION) return true;
-  const cause = e.cause;
-  return (
-    typeof cause === 'object' &&
-    cause !== null &&
-    'code' in cause &&
-    (cause as Record<string, unknown>).code === PG_UNIQUE_VIOLATION
-  );
-}
 
 @Injectable()
 export class DrizzleShortUrlRepository implements ShortUrlRepository {
@@ -35,14 +19,7 @@ export class DrizzleShortUrlRepository implements ShortUrlRepository {
 
   async create(shortUrl: ShortUrl): Promise<void> {
     const data = ShortUrlPersistenceMapper.toPersistence(shortUrl);
-    try {
-      await this.db.insert(shortUrls).values(data).execute();
-    } catch (error) {
-      if (isUniqueViolation(error)) {
-        throw new ShortCodeConflictError(shortUrl.shortCode);
-      }
-      throw error;
-    }
+    await this.db.insert(shortUrls).values(data).execute();
   }
 
   async findByShortCode(
