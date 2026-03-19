@@ -29,7 +29,7 @@ Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto 
 - Consultar estatísticas de acesso
 
 ### Não funcionais
-- Rate limit: 2 req/min por IP em POST /shorten e GET /shorten/:shortCode (Throttler + Redis)
+- Rate limit: 12 req/min por IP em POST /shorten e GET /shorten/:shortCode (Throttler + Redis)
 - Cache Redis para consultas por shortCode; invalidação em PUT e DELETE
 - Validação Zod em payloads; schemas strict
 - Throttler distribuído via Redis (contador compartilhado entre instâncias)
@@ -262,7 +262,7 @@ White flag: os scripts `clear` e `reset` usam Node (`node -e`) em vez de shell p
 
 O Redis e usado para **cache** e **seguranca**:
 
-- **Rate limit distribuido**: Throttler com storage Redis; 2 req/min por IP em POST /shorten e GET /shorten/:shortCode
+- **Rate limit distribuido**: Throttler com storage Redis; 12 req/min por IP em POST /shorten e GET /shorten/:shortCode
 - **Cache**: consultas `findByShortCode` cacheadas com TTL configurável (`CACHE_TTL_SECONDS`); invalidacao em PUT e DELETE
 - **Health**: `/health/ready` inclui Redis; retorna `degraded` se Redis estiver down
 

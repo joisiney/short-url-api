@@ -75,7 +75,7 @@ export class ShortenController {
   ) {}
 
   @Post('shorten')
-  @Throttle({ default: { limit: 2, ttl: 60_000 } })
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Criar URL curta' })
   @ApiBody({ type: CreateShortUrlRequest })
@@ -103,7 +103,7 @@ export class ShortenController {
   }
 
   @Get('shorten/:shortCode')
-  @Throttle({ default: { limit: 2, ttl: 60_000 } })
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obter URL original pelo short code' })
   @ApiParam(SHORT_CODE_PARAM)
