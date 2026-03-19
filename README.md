@@ -55,17 +55,16 @@ Com a arquitetura proposta utilizando PostgreSQL, o limite seguro de armazenamen
 **Aplicadas no código**
 - URL válida (formato URI) em POST e PUT; validação Zod
 - ShortCode único: gerado por ID sequencial (Redis INCR) + Base62; constraint UNIQUE no banco
-- ShortCode 4-7 caracteres, apenas alfanuméricos; validado em parâmetros
+- ShortCode 4-8 caracteres, apenas alfanuméricos; validado em parâmetros
+- Idempotência em POST: mesma URL retorna shortCode existente (201)
 - accessCount nunca negativo (check constraint); incremento atômico no DB
 - Cache invalidado em PUT e DELETE
 
 **Não aplicadas (podem causar dúvidas)**
-- Mesma URL pode gerar vários shortCodes; não há deduplicação por URL
 - URL não é normalizada: `https://example.com`, `https://example.com/` e `https://www.example.com` são tratadas como distintas
 - Sem autenticação: qualquer um pode criar, editar e deletar qualquer shortCode
 
 **Melhorias de requisitos (a implementar)**
-- Deduplicação: retornar shortCode existente quando a URL já foi encurtada
 - Normalização de URL antes de criar/atualizar
 - Autenticação/autorização para operações de escrita (PUT, DELETE)
 - Performance: avaliar migração do adapter HTTP de Express para Fastify para melhor throughput sob alta carga

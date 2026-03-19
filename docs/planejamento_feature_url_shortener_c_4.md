@@ -103,9 +103,11 @@ Regras:
 
 - validar URL com Zod
 - normalizar string de entrada
-- gerar `shortCode` aleatório e único
+- idempotente: se a URL ja existir, retornar shortCode existente (201)
+- gerar `shortCode` aleatorio e unico quando URL nao existir
+- shortCode entre 4 e 8 caracteres, URL-friendly
 - garantir unicidade no banco com constraint
-- retornar erro padronizado em caso de payload inválido
+- retornar erro padronizado em caso de payload invalido
 
 ## RF-02 — Recuperar URL original
 
