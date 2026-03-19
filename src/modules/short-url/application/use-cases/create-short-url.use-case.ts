@@ -1,13 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { Result, ResultUtils } from '../../../../shared/utils/result';
+import { ResultUtils } from '../../../../shared/utils/result';
 
 import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
 import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';
-import { ShortCodeGeneratorService } from '../services/short-code-generator.service';
+import { IdGeneratorService } from '../services/id-generator.service';
+import { Base62EncoderService } from '../services/base62-encoder.service';
 import { ShortUrl } from '../../domain/entities/short-url.entity';
-import { ShortCodeConflictError } from '../../domain/errors/short-code-conflict.error';
-import { ShortCodeGenerationExhaustedError } from '../../domain/errors/short-code-generation-exhausted.error';
 
 export type CreateShortUrlInput = {
   url: string;
@@ -21,56 +19,39 @@ export type CreateShortUrlOutput = {
   updatedAt: Date;
 };
 
-const MAX_ATTEMPTS = 5;
-
 @Injectable()
 export class CreateShortUrlUseCase {
   constructor(
     @Inject(SHORT_URL_REPOSITORY)
     private readonly shortUrlRepository: ShortUrlRepository,
-    private readonly shortCodeGenerator: ShortCodeGeneratorService,
+    private readonly idGenerator: IdGeneratorService,
+    private readonly base62Encoder: Base62EncoderService,
   ) {}
 
-  async execute(
-    input: CreateShortUrlInput,
-  ): Promise<Result<CreateShortUrlOutput, ShortCodeGenerationExhaustedError>> {
+  async execute(input: CreateShortUrlInput): Promise<CreateShortUrlOutput> {
     const { url } = input;
 
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const shortCode = this.shortCodeGenerator.generateCode();
-      const now = new Date();
+    const id = await this.idGenerator.getNextId();
+    const shortCode = this.base62Encoder.encode(id);
+    const now = new Date();
 
-      const shortUrl = new ShortUrl({
-        id: randomUUID(),
-        url,
-        shortCode,
-        accessCount: 0,
-        createdAt: now,
-        updatedAt: now,
-      });
+    const shortUrl = new ShortUrl({
+      id: String(id),
+      url,
+      shortCode,
+      accessCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
 
-      try {
-        await this.shortUrlRepository.create(shortUrl);
+    await this.shortUrlRepository.create(shortUrl);
 
-        return ResultUtils.ok({
-          id: shortUrl.id,
-          url: shortUrl.url,
-          shortCode: shortUrl.shortCode,
-          createdAt: shortUrl.createdAt,
-          updatedAt: shortUrl.updatedAt,
-        });
-      } catch (error) {
-        if (error instanceof ShortCodeConflictError) {
-          // retry with a new code on the next iteration
-          continue;
-        }
-        // unexpected persistence error — propagate immediately
-        throw error;
-      }
-    }
-
-    return ResultUtils.fail(
-      new ShortCodeGenerationExhaustedError(MAX_ATTEMPTS),
-    );
+    return {
+      id: shortUrl.id,
+      url: shortUrl.url,
+      shortCode: shortUrl.shortCode,
+      createdAt: shortUrl.createdAt,
+      updatedAt: shortUrl.updatedAt,
+    };
   }
 }

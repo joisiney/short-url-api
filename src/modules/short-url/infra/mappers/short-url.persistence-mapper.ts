@@ -8,7 +8,7 @@ type ShortUrlInsert = InferInsertModel<typeof shortUrls>;
 export class ShortUrlPersistenceMapper {
   static toDomain(raw: ShortUrlRecord): ShortUrl {
     return new ShortUrl({
-      id: raw.id,
+      id: String(raw.id),
       url: raw.url,
       shortCode: raw.shortCode,
       accessCount: raw.accessCount,
@@ -19,7 +19,7 @@ export class ShortUrlPersistenceMapper {
 
   static toPersistence(shortUrl: ShortUrl): ShortUrlInsert {
     return {
-      id: shortUrl.id,
+      id: Number(shortUrl.id),
       url: shortUrl.url,
       shortCode: shortUrl.shortCode,
       accessCount: shortUrl.accessCount,

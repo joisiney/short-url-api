@@ -2,14 +2,14 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class ShortUrlStatsResponse {
   @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440000',
-    description: 'ID único da short URL (UUID)',
+    example: '14000000',
+    description: 'ID numerico da short URL (bigint)',
   })
   id!: string;
 
   @ApiProperty({
-    example: 'abc1234',
-    description: 'Código curto',
+    example: 'WK2s',
+    description: 'Codigo curto Base 62',
   })
   shortCode!: string;
 

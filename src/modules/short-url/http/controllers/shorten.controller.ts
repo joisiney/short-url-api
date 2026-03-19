@@ -9,7 +9,6 @@ import {
   HttpCode,
   HttpStatus,
   UsePipes,
-  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -48,16 +47,15 @@ import { ShortUrlStatsResponse } from '../contracts/short-url-stats.response';
 import { ShortUrlPresenter } from '../presenters/short-url.presenter';
 
 import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
-import { ShortCodeGenerationExhaustedError } from '../../domain/errors/short-code-generation-exhausted.error';
 
 const SHORT_CODE_PARAM = {
   name: 'shortCode',
-  description: 'Identificador curto da URL (6 a 21 caracteres alfanuméricos)',
-  example: 'abc1234',
+  description: 'Identificador curto da URL (4 a 7 caracteres Base 62)',
+  example: 'WK2s',
   schema: {
     type: 'string',
-    minLength: 6,
-    maxLength: 21,
+    minLength: 4,
+    maxLength: 7,
     pattern: '^[a-zA-Z0-9]+$',
   },
 } as const;
@@ -90,11 +88,6 @@ export class ShortenController {
     description: 'Bad Request - validação do payload falhou',
   })
   @ApiResponse({
-    status: 409,
-    type: ApiErrorResponse,
-    description: 'Conflict - não foi possível gerar short code único',
-  })
-  @ApiResponse({
     status: 500,
     type: ApiErrorResponse,
     description: 'Internal Server Error - falha inesperada',
@@ -104,18 +97,7 @@ export class ShortenController {
     @Body() body: CreateShortUrlRequestDto,
   ): Promise<ShortUrlResponse> {
     const result = await this.createShortUrl.execute({ url: body.url });
-
-    if (result.isFailure) {
-      if (result.error instanceof ShortCodeGenerationExhaustedError) {
-        throw new ConflictException({
-          code: 'SHORT_CODE_GENERATION_EXHAUSTED',
-          message: result.error.message,
-        });
-      }
-      throw result.error as Error;
-    }
-
-    return ShortUrlPresenter.toResponse(result.value);
+    return ShortUrlPresenter.toResponse(result);
   }
 
   @Get('shorten/:shortCode')

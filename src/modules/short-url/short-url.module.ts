@@ -7,7 +7,8 @@ import { GetShortUrlUseCase } from './application/use-cases/get-short-url.use-ca
 import { UpdateShortUrlUseCase } from './application/use-cases/update-short-url.use-case';
 import { DeleteShortUrlUseCase } from './application/use-cases/delete-short-url.use-case';
 import { GetShortUrlStatsUseCase } from './application/use-cases/get-short-url-stats.use-case';
-import { ShortCodeGeneratorService } from './application/services/short-code-generator.service';
+import { IdGeneratorService } from './application/services/id-generator.service';
+import { Base62EncoderService } from './application/services/base62-encoder.service';
 
 import { DrizzleShortUrlRepository } from './infra/repositories/drizzle-short-url.repository';
 import { CachedShortUrlRepository } from './infra/repositories/cached-short-url.repository';
@@ -24,7 +25,8 @@ import { RedisModule } from '../../infra/redis/redis.module';
     UpdateShortUrlUseCase,
     DeleteShortUrlUseCase,
     GetShortUrlStatsUseCase,
-    ShortCodeGeneratorService,
+    IdGeneratorService,
+    Base62EncoderService,
     // Infrastructure
     DrizzleShortUrlRepository,
     {
