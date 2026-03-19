@@ -171,7 +171,8 @@ O projeto adotou as seguintes práticas visando controle de concorrência massiv
 
 ### Segurança
 - **Proteção do Endpoint e Headers:** A biblioteca `Helmet` embutida garante proteções contra Clickjacking (X-Frame-Options), restrições MIME e Sniffing de conteúdo, enquanto mantemos o `x-powered-by` oculto para ofuscar o Stack técnico utilizado. As regras de CORS são rigorosas para bloquear requests não autorizados num front-end externo.
-- **Gatekeeper Rigoroso (Zod):** A API adota `strict()` schema rules para rejeitar e padronizar toda entrada externa (payloads HTTP), não permitindo chaves surpresas. Tudo é sanitizado e validado antes mesmo do trânsito na Controller e nos Use Cases.
+- **Segurança Intransigente de Entrada:** Um Guard global inspeciona `body`, `params`, `query` e headers customizados e rejeita com `HTTP 400` qualquer payload suspeito. Cobertura: XSS (incluindo bypass por encoding URL e entidades HTML), data: URI perigosos (`text/html`, `text/javascript`, `image/svg+xml`), SQLi como defesa em profundidade. Headers padrao (Authorization, Content-Type, etc.) sao ignorados para reduzir falsos positivos.
+- **Gatekeeper Rigoroso (Zod):** Schemas Zod validam o contrato de entrada por endpoint (tipo, formato e regras de domínio) antes da execução dos Use Cases.
 - **Query Builds Seguras e Tratamento Drizzle:** Proteção contra SQL injections nativamente implementadas no uso restrito dos Query Builders. Não utilizamos concatenações abertas para evitar execução indevida. O Drizzle mapeia apenas tabelas autorizadas na memória e oculta relatórios de erro do DB.
 
 ## Estrutura do projeto
