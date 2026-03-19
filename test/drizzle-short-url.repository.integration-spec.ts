@@ -123,5 +123,4 @@ describe('DrizzleShortUrlRepository (integration)', () => {
     const after2 = await repository.findByShortCode('in01');
     expect(after2?.accessCount).toBe(2);
   });
-
 });
