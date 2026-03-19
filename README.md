@@ -56,6 +56,7 @@ Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto 
 - Deduplicação: retornar shortCode existente quando a URL já foi encurtada
 - Normalização de URL antes de criar/atualizar
 - Autenticação/autorização para operações de escrita (PUT, DELETE)
+- Performance: avaliar migração do adapter HTTP de Express para Fastify para melhor throughput sob alta carga
 
 ## Arquitetura e Soluções
 
