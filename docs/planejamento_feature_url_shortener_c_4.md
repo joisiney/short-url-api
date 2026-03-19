@@ -231,6 +231,8 @@ Regras:
 - `helmet`
 - `cors` restritivo por ambiente
 - `x-powered-by` desabilitado
+- filtro global de segurança para `body`, `params`, `query` e `headers`
+- política intransigente: payload suspeito de XSS é rejeitado com `HTTP 400`
 - HTTPS em ambientes expostos
 - HSTS em produção quando aplicável
 - limite de payload
@@ -922,6 +924,8 @@ Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset
 - limite de payload
 - timeout configurado
 - `x-powered-by` desabilitado
+- filtro global de entrada (body/params/query/headers)
+- rejeição `HTTP 400` para argumentos suspeitos (ex.: `<script>`, `javascript:`, handlers inline)
 - resposta padronizada para erro
 
 ## Logs
