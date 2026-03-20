@@ -2,7 +2,7 @@
 
 ## 1. Objetivo
 
-Projetar de ponta a ponta a feature **URL Shortening Service** usando **NestJS + TypeScript strict + Zod + Drizzle + PostgreSQL + Redis + Docker Compose + Swagger**, com organização por **domínio/feature**, foco em segurança, observabilidade, consistência arquitetural e facilidade de evolução.
+Projetar de ponta a ponta a feature **URL Shortening Service** usando **NestJS + TypeScript strict + class-validator/class-transformer + Drizzle + PostgreSQL + Redis + Docker Compose + Swagger**, com organização por **domínio/feature**, foco em segurança, observabilidade, consistência arquitetural e facilidade de evolução.
 
 Este documento cobre:
 
@@ -51,7 +51,7 @@ Não faz parte do escopo:
 - **NestJS**
 - **PostgreSQL**
 - **Drizzle ORM**
-- **Zod** para validação
+- **class-validator** e **class-transformer** na borda HTTP (ValidationPipe global); **class-validator** também na validação de env na subida
 - **Swagger/OpenAPI**
 - **Docker Compose**
 - **Redis** para rate limit distribuído e cache pontual
@@ -61,7 +61,7 @@ Não faz parte do escopo:
 - estrutura por feature/domínio, não por tipo de arquivo global
 - separação clara entre controller, use case, service e repository
 - repositório como única porta de acesso persistente
-- validação de toda entrada externa com Zod
+- validação de entrada HTTP com DTOs (ValidationPipe + class-validator); parâmetro `shortCode` com pipe dedicado; env validada com classe `EnvVariables` e `parseEnv`
 - domínio desacoplado de detalhes de framework e ORM
 - observabilidade desde o primeiro commit
 - segurança e padronização como requisitos transversais
@@ -101,7 +101,7 @@ Saída esperada `201`:
 
 Regras:
 
-- validar URL com Zod
+- validar URL nos DTOs (`@IsUrl` em POST/PUT)
 - normalizar string de entrada
 - idempotente: se a URL ja existir, retornar shortCode existente (201)
 - gerar `shortCode` aleatorio e unico quando URL nao existir
@@ -151,7 +151,7 @@ Entrada:
 
 Regras:
 
-- validar `shortCode` e body com Zod
+- validar `shortCode` (pipe dedicado) e body (ValidationPipe global)
 - manter o mesmo `shortCode`
 - atualizar `updatedAt`
 - retornar `404` se inexistente
@@ -214,16 +214,16 @@ Regras:
 - `noUncheckedIndexedAccess: true`
 - sem `any` desnecessário
 - contratos públicos com tipos explícitos
-- aproveitar inferência do Zod e Drizzle para reduzir duplicação
+- aproveitar inferência de tipos do Drizzle onde aplicável; DTOs Swagger e validação compartilham a mesma classe
 
 ## Validação
 
-- toda entrada externa validada com Zod
-- schemas pequenos e específicos por endpoint
-- separar schemas de entrada, saída e domínio
-- usar normalização/sanitização de texto antes do processamento
+- bodies validados pelo ValidationPipe global (`transform`, `whitelist`) e DTOs com decorators class-validator
+- `shortCode` validado por pipe dedicado (string primitiva), paridade com regras 4-8 e charset
+- separar contratos de entrada HTTP, saída e domínio
+- sem sanitização extra de URL além da validação (paridade de idempotência)
 - rejeitar payload fora do contrato esperado
-- mapear `ZodError` para formato HTTP padronizado
+- `exceptionFactory` do ValidationPipe produz `VALIDATION_ERROR`, mensagem fixa e `details` com `field` e `message`; o SecurityInputGuard permanece ortogonal (rejeição de padrões perigosos antes dos pipes)
 
 ## Segurança
 
@@ -238,7 +238,7 @@ Regras:
 - limite de payload
 - logs sem segredos/dados sensíveis
 - secrets fora do repositório
-- env validada na inicialização com Zod
+- env validada na inicialização com `EnvVariables` (class-transformer + class-validator) e regras cruzadas em `env-cross-rules.ts`
 
 ## Resiliência e abuso
 
@@ -304,7 +304,9 @@ src/
     db.config.ts
     redis.config.ts
     logger.config.ts
-    env.schema.ts
+    env-variables.ts
+    env-cross-rules.ts
+    env.parser.ts
 
   shared/
     contracts/
@@ -558,7 +560,7 @@ flowchart TB
 
 - controllers
 - use cases
-- validação Zod
+- validação com ValidationPipe e DTOs (class-validator)
 - rate limiting
 - logging
 - swagger
@@ -580,7 +582,7 @@ flowchart TB
 flowchart LR
     Controller[Controllers]
     Throttler[ThrottlerGuard]
-    ZodValidation[Zod Validation Pipe/Layer]
+    DtoValidation[ValidationPipe + DTOs / ShortCodeParamPipe]
     UseCases[Use Cases]
     Generator[ShortCodeGeneratorService]
     RepoPort[ShortUrlRepository Port]
@@ -594,8 +596,8 @@ flowchart LR
 
     Controller --> Throttler
     Throttler --> Controller
-    Controller --> ZodValidation
-    ZodValidation --> UseCases
+    Controller --> DtoValidation
+    DtoValidation --> UseCases
     UseCases --> Generator
     UseCases --> RepoPort
     RepoPort --> CachedRepo
@@ -611,7 +613,7 @@ flowchart LR
 
 1. Throttler verifica rate limit (Redis)
 2. controller recebe request
-3. schema Zod valida e sanitiza entrada
+3. ValidationPipe e pipes de parâmetro validam entrada (`whitelist` remove propriedades não decoradas no body)
 4. use case executa regra
 5. repository resolve persistência (cache Redis em hit, Drizzle em miss)
 6. presenter monta resposta HTTP estável
@@ -621,7 +623,7 @@ flowchart LR
 ```mermaid
 flowchart TD
     A[HTTP Request] --> B[Controller]
-    B --> C[Validation Layer Zod]
+    B --> C[Validation Layer class-validator]
     C --> D[Use Case]
     D --> E[Domain Rules]
     D --> F[Repository Port]
@@ -630,6 +632,8 @@ flowchart TD
     D --> I[Presenter]
     I --> J[HTTP Response]
 ```
+
+Nota: no NestJS, guards e interceptors (pré) executam antes dos pipes; o `ValidationPipe` e o `ShortCodeParamPipe` rodam na fase de pipes, antes do método do controller. O diagrama acima é simplificado.
 
 ---
 
@@ -770,49 +774,36 @@ export const shortUrlsTable = pgTable('short_urls', {
 
 ---
 
-# 13. Validação com Zod
+# 13. Validação com class-validator / class-transformer
 
 ## Estratégia
 
-- um schema por endpoint/contrato de entrada
-- schemas pequenos
-- `strict()` quando campos extras forem proibidos
-- `strip()` ou comportamento equivalente quando fizer sentido remover desconhecidos
-- normalização antes da regra de negócio
+- um DTO por corpo de requisição, com `@ApiProperty` e decorators class-validator na mesma classe
+- ValidationPipe global com `whitelist: true` e `transform: true` (`forbidNonWhitelisted` desligado na entrega atual para paridade com clientes que enviam campos extras)
+- parâmetro `shortCode` como string primitiva no `@Param`, com `ShortCodeParamPipe` (regras 4-8, alfanumérico)
+- configuração: `plainToInstance` + `validateSync` em `parseEnv`, cache do primeiro resultado válido; regras cruzadas (pool, produção, timeouts DB) em `collectEnvCrossRuleViolations`
 
-## Exemplos de validação
+## Exemplos conceituais
 
-### Create short URL request
-
-```ts
-const createShortUrlSchema = z.object({
-  url: z
-    .string()
-    .trim()
-    .min(1)
-    .max(2048)
-    .url(),
-}).strict();
-```
-
-### Short code param
+### Create short URL request (DTO)
 
 ```ts
-const shortCodeParamSchema = z.object({
-  shortCode: z
-    .string()
-    .trim()
-    .min(4)
-    .max(32)
-    .regex(/^[a-zA-Z0-9_-]+$/),
-}).strict();
+export class CreateShortUrlRequest {
+  @ApiProperty({ example: 'https://www.example.com/path' })
+  @IsUrl({ require_protocol: true }, { message: 'A URL deve ser válida' })
+  url!: string;
+}
 ```
+
+### Short code (pipe)
+
+Validação imperativa no `ShortCodeParamPipe`, lançando `BadRequestException` com o mesmo contrato de erro do ValidationPipe (`VALIDATION_ERROR`, `details`).
 
 ## Regras importantes
 
-- nunca fazer parse manual sem schema
-- padronizar mapeamento de `ZodError`
-- não misturar validação estrutural com regra de negócio
+- não misturar política do SecurityInputGuard com validação de DTO
+- padronizar erros de validação via `validationExceptionFactory`
+- não misturar validação estrutural com regra de negócio no domínio
 - validação deve ocorrer antes do use case
 
 ---
@@ -822,7 +813,7 @@ const shortCodeParamSchema = z.object({
 ## 14.1 Fluxo — criar short URL
 
 ```text
-Request -> Controller -> Zod validation -> CreateShortUrlUseCase
+Request -> Controller -> ValidationPipe / ShortCodeParamPipe -> CreateShortUrlUseCase
 -> gerar shortCode -> tentar persistir -> colisão? retry curto
 -> presenter -> response 201
 ```
@@ -962,7 +953,7 @@ Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset
 
 ## Validação
 
-- schemas Zod de body e params
+- DTOs (body) e ShortCodeParamPipe (`shortCode`)
 - mapping de erro de validação
 
 ## E2E
@@ -1025,7 +1016,9 @@ src/
     bootstrap.ts
 
   config/
-    env.schema.ts
+    env-variables.ts
+    env-cross-rules.ts
+    env.parser.ts
     app.config.ts
     db.config.ts
     redis.config.ts
@@ -1048,7 +1041,9 @@ src/
         timeout.interceptor.ts
         logging.interceptor.ts
       pipes/
-        zod-validation.pipe.ts
+        short-code-param.pipe.ts
+      utils/
+        validation-exception.factory.ts
     utils/
       sanitize-string.ts
       normalize-url.ts
@@ -1179,7 +1174,7 @@ test/
 ## Commit 01 — bootstrap mínimo
 
 - Nest base
-- config Zod
+- config com env validada (class-validator)
 - strict TS
 - docker compose com postgres/redis
 - README inicial
@@ -1194,7 +1189,7 @@ test/
 
 - contracts padrão
 - exception filter
-- zod validation pipe
+- ValidationPipe global e factory de erro de validação
 - logging/request context interceptors
 
 ## Commit 04 — domínio short-url
@@ -1267,7 +1262,7 @@ O projeto deve ter `README.md` na raiz com:
 ## Escolhas centrais
 
 - **NestJS** como framework
-- **Zod** no lugar de class-validator/class-transformer
+- **class-validator** e **class-transformer** no lugar de Zod na borda HTTP e na validação de env
 - **Drizzle + PostgreSQL** para persistência
 - **Redis** para throttle distribuído e cache pontual
 - **feature-first architecture**
@@ -1308,7 +1303,7 @@ A partir deste planejamento, o próximo artefato ideal é quebrar isso em:
 ```mermaid
 flowchart TD
     A[Cliente envia request HTTP] --> B[Controller da feature]
-    B --> C[Validação Zod]
+    B --> C[ValidationPipe / pipes de parâmetro]
     C --> D[Use Case]
     D --> E{Operação}
     E -->|Create| F[Gerar shortCode e persistir]
