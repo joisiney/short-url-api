@@ -42,6 +42,7 @@ import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shorte
 import {
   SHORT_CODE_MIN_LENGTH,
   SHORT_CODE_MAX_LENGTH,
+  SHORT_CODE_PATTERN_SCHEMA,
 } from '../../domain/constants/short-code.constants';
 
 const SHORT_CODE_PARAM = {
@@ -52,7 +53,7 @@ const SHORT_CODE_PARAM = {
     type: 'string',
     minLength: SHORT_CODE_MIN_LENGTH,
     maxLength: SHORT_CODE_MAX_LENGTH,
-    pattern: '^[a-zA-Z0-9]+$',
+    pattern: SHORT_CODE_PATTERN_SCHEMA,
   },
 } as const;
 

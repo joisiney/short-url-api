@@ -1,2 +1,5 @@
 export const SHORT_CODE_MIN_LENGTH = 4;
 export const SHORT_CODE_MAX_LENGTH = 8;
+
+export const SHORT_CODE_ALPHANUMERIC_PATTERN = /^[a-zA-Z0-9]+$/;
+export const SHORT_CODE_PATTERN_SCHEMA = SHORT_CODE_ALPHANUMERIC_PATTERN.source;

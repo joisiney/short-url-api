@@ -7,6 +7,7 @@ import {
 import {
   SHORT_CODE_MIN_LENGTH,
   SHORT_CODE_MAX_LENGTH,
+  SHORT_CODE_ALPHANUMERIC_PATTERN,
 } from '../../../modules/short-url/domain/constants/short-code.constants';
 
 @Injectable()
@@ -51,7 +52,7 @@ export class ShortCodeParamPipe implements PipeTransform<unknown, string> {
       });
     }
 
-    if (!/^[a-zA-Z0-9]+$/.test(value)) {
+    if (!SHORT_CODE_ALPHANUMERIC_PATTERN.test(value)) {
       throw new BadRequestException({
         code: 'VALIDATION_ERROR',
         message: 'Request validation failed',
