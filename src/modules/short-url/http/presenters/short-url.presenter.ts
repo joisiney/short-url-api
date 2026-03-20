@@ -1,9 +1,9 @@
-import { ShortUrlResponse } from '../contracts/short-url.response';
-import { ShortUrlStatsResponse } from '../contracts/short-url-stats.response';
-import type { CreateShortUrlOutput } from '../../application/use-cases/create-short-url.use-case';
-import type { GetShortUrlOutput } from '../../application/use-cases/get-short-url.use-case';
-import type { UpdateShortUrlOutput } from '../../application/use-cases/update-short-url.use-case';
-import type { GetShortUrlStatsOutput } from '../../application/use-cases/get-short-url-stats.use-case';
+import { ShortUrlResponse } from '@modules/short-url/http/contracts/short-url.response';
+import { ShortUrlStatsResponse } from '@modules/short-url/http/contracts/short-url-stats.response';
+import type { CreateShortUrlOutput } from '@modules/short-url/application/use-cases/create-short-url.use-case';
+import type { GetShortUrlOutput } from '@modules/short-url/application/use-cases/get-short-url.use-case';
+import type { UpdateShortUrlOutput } from '@modules/short-url/application/use-cases/update-short-url.use-case';
+import type { GetShortUrlStatsOutput } from '@modules/short-url/application/use-cases/get-short-url-stats.use-case';
 
 export class ShortUrlPresenter {
   static toResponse(

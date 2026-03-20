@@ -13,7 +13,7 @@ import { Base62EncoderService } from './application/services/base62-encoder.serv
 import { DrizzleShortUrlRepository } from './infra/repositories/drizzle-short-url.repository';
 import { CachedShortUrlRepository } from './infra/repositories/cached-short-url.repository';
 import { SHORT_URL_REPOSITORY } from './domain/repositories/short-url.repository';
-import { RedisModule } from '../../infra/redis/redis.module';
+import { RedisModule } from '@infra/redis/redis.module';
 
 @Module({
   imports: [RedisModule],

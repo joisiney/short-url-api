@@ -1,5 +1,5 @@
-import { ShortUrl } from '../../domain/entities/short-url.entity';
-import { shortUrls } from '../../../../infra/database/schema/short-urls.table';
+import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
+import { shortUrls } from '@infra/database/schema/short-urls.table';
 import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 
 type ShortUrlRecord = InferSelectModel<typeof shortUrls>;

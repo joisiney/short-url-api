@@ -10,7 +10,15 @@
   "transformIgnorePatterns": ["/node_modules/"],
   "setupFiles": ["<rootDir>/test/setup-env.ts"],
   "moduleNameMapper": {
-    "^src/(.*)$": "<rootDir>/src/$1"
+    "^src/(.*)$": "<rootDir>/src/$1",
+    "^@config$": "<rootDir>/src/config",
+    "^@config/(.*)$": "<rootDir>/src/config/$1",
+    "^@infra$": "<rootDir>/src/infra",
+    "^@infra/(.*)$": "<rootDir>/src/infra/$1",
+    "^@shared$": "<rootDir>/src/shared",
+    "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+    "^@modules$": "<rootDir>/src/modules",
+    "^@modules/(.*)$": "<rootDir>/src/modules/$1"
   },
   "collectCoverageFrom": [
     "<rootDir>/src/**/*.(t|j)s"

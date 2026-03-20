@@ -1,8 +1,8 @@
 import { CreateShortUrlUseCase } from './create-short-url.use-case';
-import { IdGeneratorService } from '../services/id-generator.service';
-import { Base62EncoderService } from '../services/base62-encoder.service';
-import { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
-import { ShortUrl } from '../../domain/entities/short-url.entity';
+import { IdGeneratorService } from '@modules/short-url/application/services/id-generator.service';
+import { Base62EncoderService } from '@modules/short-url/application/services/base62-encoder.service';
+import { ShortUrlRepository } from '@modules/short-url/domain/repositories/short-url.repository';
+import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
 
 function makeRepository(
   overrides: Partial<ShortUrlRepository> = {},

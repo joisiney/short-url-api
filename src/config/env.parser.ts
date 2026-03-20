@@ -2,7 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { EnvVariables, type Env } from './env-variables';
 import { collectEnvCrossRuleViolations } from './env-cross-rules';
-import { flattenValidationErrors } from '../shared/validation/flatten-validation-errors';
+import { flattenValidationErrors } from '@shared/validation/flatten-validation-errors';
 import { ENV_OPTIONAL_DEFAULTS } from './env-defaults';
 
 let cachedEnv: Env | null = null;

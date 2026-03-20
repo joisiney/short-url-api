@@ -1,14 +1,14 @@
 import { NotFoundException, ConflictException } from '@nestjs/common';
 
 import { ShortenController } from './shorten.controller';
-import { CreateShortUrlUseCase } from '../../application/use-cases/create-short-url.use-case';
-import { GetShortUrlUseCase } from '../../application/use-cases/get-short-url.use-case';
-import { UpdateShortUrlUseCase } from '../../application/use-cases/update-short-url.use-case';
-import { DeleteShortUrlUseCase } from '../../application/use-cases/delete-short-url.use-case';
-import { GetShortUrlStatsUseCase } from '../../application/use-cases/get-short-url-stats.use-case';
-import { ResultUtils } from '../../../../shared/utils/result';
-import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
-import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shortened.error';
+import { CreateShortUrlUseCase } from '@modules/short-url/application/use-cases/create-short-url.use-case';
+import { GetShortUrlUseCase } from '@modules/short-url/application/use-cases/get-short-url.use-case';
+import { UpdateShortUrlUseCase } from '@modules/short-url/application/use-cases/update-short-url.use-case';
+import { DeleteShortUrlUseCase } from '@modules/short-url/application/use-cases/delete-short-url.use-case';
+import { GetShortUrlStatsUseCase } from '@modules/short-url/application/use-cases/get-short-url-stats.use-case';
+import { ResultUtils } from '@shared/utils/result';
+import { ShortUrlNotFoundError } from '@modules/short-url/domain/errors/short-url-not-found.error';
+import { UrlAlreadyShortenedError } from '@modules/short-url/domain/errors/url-already-shortened.error';
 
 describe('ShortenController', () => {
   function makeSut() {

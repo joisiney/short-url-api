@@ -21,29 +21,29 @@ import {
   ApiExtraModels,
 } from '@nestjs/swagger';
 
-import { ApiErrorResponse } from '../../../../shared/http/contracts/api-error.contract';
+import { ApiErrorResponse } from '@shared/http/contracts/api-error.contract';
 
-import { ShortCodeParamPipe } from '../../../../shared/http/pipes/short-code-param.pipe';
+import { ShortCodeParamPipe } from '@shared/http/pipes/short-code-param.pipe';
 
-import { CreateShortUrlUseCase } from '../../application/use-cases/create-short-url.use-case';
-import { GetShortUrlUseCase } from '../../application/use-cases/get-short-url.use-case';
-import { UpdateShortUrlUseCase } from '../../application/use-cases/update-short-url.use-case';
-import { DeleteShortUrlUseCase } from '../../application/use-cases/delete-short-url.use-case';
-import { GetShortUrlStatsUseCase } from '../../application/use-cases/get-short-url-stats.use-case';
+import { CreateShortUrlUseCase } from '@modules/short-url/application/use-cases/create-short-url.use-case';
+import { GetShortUrlUseCase } from '@modules/short-url/application/use-cases/get-short-url.use-case';
+import { UpdateShortUrlUseCase } from '@modules/short-url/application/use-cases/update-short-url.use-case';
+import { DeleteShortUrlUseCase } from '@modules/short-url/application/use-cases/delete-short-url.use-case';
+import { GetShortUrlStatsUseCase } from '@modules/short-url/application/use-cases/get-short-url-stats.use-case';
 
-import { CreateShortUrlRequest } from '../contracts/create-short-url.request';
-import { UpdateShortUrlRequest } from '../contracts/update-short-url.request';
-import { ShortUrlResponse } from '../contracts/short-url.response';
-import { ShortUrlStatsResponse } from '../contracts/short-url-stats.response';
-import { ShortUrlPresenter } from '../presenters/short-url.presenter';
+import { CreateShortUrlRequest } from '@modules/short-url/http/contracts/create-short-url.request';
+import { UpdateShortUrlRequest } from '@modules/short-url/http/contracts/update-short-url.request';
+import { ShortUrlResponse } from '@modules/short-url/http/contracts/short-url.response';
+import { ShortUrlStatsResponse } from '@modules/short-url/http/contracts/short-url-stats.response';
+import { ShortUrlPresenter } from '@modules/short-url/http/presenters/short-url.presenter';
 
-import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
-import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shortened.error';
+import { ShortUrlNotFoundError } from '@modules/short-url/domain/errors/short-url-not-found.error';
+import { UrlAlreadyShortenedError } from '@modules/short-url/domain/errors/url-already-shortened.error';
 import {
   SHORT_CODE_MIN_LENGTH,
   SHORT_CODE_MAX_LENGTH,
   SHORT_CODE_PATTERN_SCHEMA,
-} from '../../domain/constants/short-code.constants';
+} from '@modules/short-url/domain/constants/short-code.constants';
 
 const SHORT_CODE_PARAM = {
   name: 'shortCode',

@@ -8,7 +8,7 @@ import {
   SHORT_CODE_MIN_LENGTH,
   SHORT_CODE_MAX_LENGTH,
   SHORT_CODE_ALPHANUMERIC_PATTERN,
-} from '../../../modules/short-url/domain/constants/short-code.constants';
+} from '@modules/short-url/domain/constants/short-code.constants';
 
 @Injectable()
 export class ShortCodeParamPipe implements PipeTransform<unknown, string> {

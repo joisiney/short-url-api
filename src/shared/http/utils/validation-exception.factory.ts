@@ -3,7 +3,7 @@ import type { ValidationError } from 'class-validator';
 import {
   type ValidationErrorDetail,
   flattenValidationErrors,
-} from '../../validation/flatten-validation-errors';
+} from '@shared/validation/flatten-validation-errors';
 
 export type { ValidationErrorDetail };
 export { flattenValidationErrors };

@@ -1,7 +1,7 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import type { RedisConfig } from '../../config/redis.config';
+import type { RedisConfig } from '@config/redis.config';
 
 const REDIS_RETRY_MAX_ATTEMPTS = 3;
 const REDIS_RETRY_BASE_MS = 100;

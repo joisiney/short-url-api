@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 
-import { RequestContext } from '../interceptors/request-context.interceptor';
+import { RequestContext } from '@shared/http/interceptors/request-context.interceptor';
 
 function isErrorObject(val: unknown): val is Record<string, unknown> {
   return typeof val === 'object' && val !== null;
