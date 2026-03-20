@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ValidationPipe } from '@nestjs/common';
 import { json } from 'express';
 import helmet from 'helmet';
 import request from 'supertest';
@@ -7,6 +8,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from '../src/app/app.module';
 import { AppExceptionFilter } from '../src/shared/http/filters/app-exception.filter';
+import { validationExceptionFactory } from '../src/shared/http/utils/validation-exception.factory';
 import { RequestContextInterceptor } from '../src/shared/http/interceptors/request-context.interceptor';
 import { LoggingInterceptor } from '../src/shared/http/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from '../src/shared/http/interceptors/timeout.interceptor';
@@ -30,6 +32,13 @@ describe('API HTTP (e2e)', () => {
     const configService = app.get(ConfigService);
 
     app.useGlobalFilters(new AppExceptionFilter());
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        exceptionFactory: validationExceptionFactory,
+      }),
+    );
     app.useGlobalInterceptors(
       new RequestContextInterceptor(),
       new LoggingInterceptor(),
