@@ -2,7 +2,8 @@ import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { EnvVariables, type Env } from './env-variables';
 import { collectEnvCrossRuleViolations } from './env-cross-rules';
-import { flattenValidationErrors } from '../shared/http/utils/validation-exception.factory';
+import { flattenValidationErrors } from '../shared/validation/flatten-validation-errors';
+import { ENV_OPTIONAL_DEFAULTS } from './env-defaults';
 
 let cachedEnv: Env | null = null;
 
@@ -22,8 +23,9 @@ function normalizeEnvInput(
     }
   };
 
-  applyDefault('APP_HTTP_TIMEOUT_MS', '5000');
-  applyDefault('CACHE_TTL_SECONDS', '60');
+  for (const [key, fallback] of Object.entries(ENV_OPTIONAL_DEFAULTS)) {
+    applyDefault(key, fallback);
+  }
 
   return out;
 }

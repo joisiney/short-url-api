@@ -88,9 +88,7 @@ export class EnvVariables {
   APP_HOST!: string;
 
   @Transform(({ value }: { value: unknown }): string =>
-    value === undefined || value === ''
-      ? 'api'
-      : envScalarToString(value).trim(),
+    envScalarToString(value).trim(),
   )
   @IsString()
   @MinLength(1)
@@ -112,9 +110,7 @@ export class EnvVariables {
   APP_CORS_ORIGIN!: string[];
 
   @Transform(({ value }: { value: unknown }): string =>
-    value === undefined || value === ''
-      ? '100kb'
-      : envScalarToString(value).trim(),
+    envScalarToString(value).trim(),
   )
   @IsString()
   @Matches(/^\d+(\.\d+)?(b|kb|mb|gb)$/i, {
