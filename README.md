@@ -7,6 +7,8 @@
 API REST de encurtamento de URLs. Permite criar, consultar, atualizar e remover URLs curtas, além de consultar estatísticas de acesso. 
 Arquitetura orientada por domínio, tipagem estrita, validação na borda HTTP com **class-validator** e **class-transformer** (ValidationPipe global), parâmetro `shortCode` com pipe dedicado, e alto foco em segurança, escalabilidade e qualidade guiada por **TDD (Test-Driven Development)**.
 
+Se quiser ver como a solução foi pensada antes da implementação, vale consultar o [planejamento arquitetural](docs/planejamento_feature_url_shortener_c_4.md). Ele concentra o racional de escopo, os diagramas C4, o plano incremental e os trade-offs assumidos na feature.
+
 ## Stack
 
 - Node.js 20+
@@ -206,7 +208,7 @@ A observabilidade foi pensada desde o início: instrumentar cedo evita retrabalh
 | Sem backend OTLP, com agregação de logs (CloudWatch, Loki, etc.) | Médio: logs com request-id permitem busca e correlação |
 | Com backend OTLP configurado | Completo: traces persistidos, rastreabilidade ponta a ponta |
 
-A instrumentação é carregada via `-r ./dist/instrumentation.js` antes do bootstrap NestJS (`start:prod`). O valor pleno depende de conectar um consumidor (OTLP ou agregação de logs).
+A instrumentação é carregada via `-r ./dist/instrumentation.js` antes do bootstrap NestJS (`start:prod`). Na prática, isso permite propagar contexto distribuído, exportar traces, correlacionar logs estruturados por `traceId` e `requestId` e deixar a aplicação pronta para evoluir a telemetria via OTLP sem lock-in. O valor pleno depende de conectar um consumidor (OTLP ou agregação de logs).
 
 **Consumidores compatíveis** (via OTLP): OpenTelemetry Collector, Jaeger, Grafana Tempo; SaaS: Datadog, Honeycomb, New Relic, SigNoz. Basta configurar `OTEL_EXPORTER_OTLP_ENDPOINT`.
 
@@ -307,7 +309,7 @@ O Redis e usado para **cache** e **seguranca**:
 
 - **Rate limit distribuido**: Throttler com storage Redis; 12 req/min por IP em POST /shorten e GET /shorten/:shortCode
 - **Cache**: consultas `findByShortCode` cacheadas com TTL configurável (`CACHE_TTL_SECONDS`); invalidacao em PUT e DELETE
-- **Health**: `/health/ready` inclui Redis; retorna `degraded` se Redis estiver down
+- **Health**: `/api/health/ready` inclui Redis; retorna `degraded` se Redis estiver down
 
 Variaveis: `REDIS_*`, `CACHE_TTL_SECONDS` (opcional, default 60).
 
@@ -374,11 +376,17 @@ Testes de integração (repositório contra banco real) e e2e (API completa via 
 ## Convenções do projeto
 
 - Organização por feature/domínio
+- Separação explícita entre `domain`, `application`, `http` e `infra` dentro do módulo
+- Imports absolutos via aliases `@config`, `@infra`, `@shared` e `@modules`; `./` fica restrito ao mesmo diretório ou filhos
 - Validação com class-validator nos contracts (DTOs); `exceptionFactory` alinha erros ao código `VALIDATION_ERROR`
+- `ValidationPipe` global para body tipado e pipe dedicado para `shortCode`; o `SecurityInputGuard` atua como proteção transversal na borda HTTP
 - Regras de negócio nos use cases, não no controller
-- Acesso a banco via repositório (interface no domain)
+- Acesso a banco via repositório (interface no domain), com porta de persistência no domínio e adaptadores concretos na infraestrutura
 - TypeScript strict mode
+- `noUncheckedIndexedAccess` habilitado e contratos públicos mantidos tipados
 - Contratos HTTP tipados e documentados com Swagger
+
+No desenho do código, segui KISS e YAGNI de forma bem pragmática: bootstrap mínimo, módulos pequenos, abstrações só quando já se pagavam e nada de camadas extras por vaidade. A estrutura resultante é uma arquitetura em camadas inspirada em Clean Architecture, com porta de persistência e adaptadores na infraestrutura; o foco aqui foi clareza e responsabilidade única, não aderência dogmática a rótulos.
 
 ## Fluxo de qualidade (antes de PR)
 
@@ -393,3 +401,19 @@ npm run build
 ```
 
 Commits devem seguir [Conventional Commits](https://www.conventionalcommits.org/): `tipo(escopo): descrição` (ex: `feat(short-url): add create endpoint`).
+
+## Fechamento
+
+Se você quiser entender a linha de raciocínio do projeto antes de entrar no código, comece pelo [planejamento arquitetural](docs/planejamento_feature_url_shortener_c_4.md). Ele mostra o desenho original da solução, os diagramas C4, o plano incremental e quais escolhas ficaram deliberadamente fora do escopo inicial.
+
+No dia a dia, costumo usar KISS como guia principal e YAGNI como mantra, e neste projeto levei isso a sério. O único "paradoxo consciente" foi manter `/api/health/live` e a base de observabilidade com OpenTelemetry mesmo indo além do mínimo do desafio: eu prefiro subir qualquer serviço com uma garantia simples de liveness/readiness e com rastreabilidade mínima desde o começo. Aqui, o OpenTelemetry entra para propagar contexto distribuído, exportar traces, correlacionar logs por `traceId` e `requestId` e deixar a aplicação pronta para evoluir telemetria sem acoplamento a fornecedor.
+
+Resumo factual da suíte atual, medido na execução local deste repositório:
+
+| Escopo | Quantidade de testes | Cobertura atual na aplicação |
+|--------|----------------------|------------------------------|
+| Unitário | 85 | 37.74% statements, 31.22% branches, 27.65% functions, 37.68% lines |
+| Integração | 15 | 14.54% statements, 14.70% branches, 16.83% functions, 14.34% lines |
+| E2E | 17 | 46.98% statements, 54.52% branches, 38.04% functions, 45.68% lines |
+
+As coberturas acima foram geradas por escopo isolado, não por merge de relatórios. Os comandos usados foram `npm run test:cov`, `jest --config ./test/jest-integration.json --runInBand --coverage` e `jest --config ./test/jest-e2e.json --runInBand --coverage`.
