@@ -1,11 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { z } from 'zod';
-
-export const createShortUrlSchema = z.object({
-  url: z.url({ message: 'A URL deve ser válida' }),
-});
-
-export type CreateShortUrlRequestDto = z.infer<typeof createShortUrlSchema>;
+import { IsUrl } from 'class-validator';
 
 export class CreateShortUrlRequest {
   @ApiProperty({
@@ -13,5 +7,6 @@ export class CreateShortUrlRequest {
     description: 'URL original a ser encurtada (formato URI válido)',
     format: 'uri',
   })
+  @IsUrl({ require_protocol: true }, { message: 'A URL deve ser válida' })
   url!: string;
 }
