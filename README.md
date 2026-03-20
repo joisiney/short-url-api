@@ -1,81 +1,78 @@
-
-  <img src="https://res.cloudinary.com/dmoi0mmuj/image/upload/c_pad,w_900/v1773872265/Gemini_Generated_Image_r1wqexr1wqexr1wq_r7xz8y.png" alt="Short URL API Banner" />
-
+<img src="https://res.cloudinary.com/dmoi0mmuj/image/upload/c_pad,w_900/v1773872265/Gemini_Generated_Image_r1wqexr1wqexr1wq_r7xz8y.png" alt="Short URL API Banner" />
 
 <br/>
 
-API REST de encurtamento de URLs. Permite criar, consultar, atualizar e remover URLs curtas, além de consultar estatísticas de acesso. 
-Arquitetura orientada por domínio, tipagem estrita, validação na borda HTTP com **class-validator** e **class-transformer** (ValidationPipe global), parâmetro `shortCode` com pipe dedicado, e alto foco em segurança, escalabilidade e qualidade guiada por **TDD (Test-Driven Development)**.
+# Short URL API
 
-Se quiser ver como a solução foi pensada antes da implementação, vale consultar o [planejamento arquitetural](docs/planejamento_feature_url_shortener_c_4.md). Ele concentra o racional de escopo, os diagramas C4, o plano incremental e os trade-offs assumidos na feature.
+API REST de encurtamento de URLs construída com NestJS, TypeScript, PostgreSQL, Drizzle e Redis.
+
+A proposta deste projeto não foi só “resolver o desafio” e seguir em frente. A ideia foi construir uma solução simples de entender, agradável de evoluir e sólida o bastante para aguentar uma conversa séria sobre arquitetura, domínio, observabilidade, segurança e qualidade de código.
+
+Em outras palavras: eu quis entregar algo que funcionasse bem hoje, sem virar uma dor de cabeça amanhã.
+
+Se você quiser ver o racional da solução antes de mergulhar no código, vale começar pelo [planejamento arquitetural](docs/planejamento_feature_url_shortener_c_4.md). Lá estão o escopo pensado, os diagramas C4, o plano incremental e os trade-offs assumidos ao longo da implementação.
+
+## O que esta API faz
+
+De forma objetiva, a API permite:
+
+* criar short URLs
+* consultar a URL original a partir do `shortCode`
+* atualizar uma short URL existente
+* remover uma short URL
+* consultar estatísticas de acesso
+
+O projeto também foi pensado com algumas preocupações que costumam aparecer cedo em sistemas reais: validação consistente na borda HTTP, rate limit distribuído, cache, rastreabilidade mínima, separação clara de responsabilidades e testes cobrindo regras importantes.
 
 ## Stack
 
-- Node.js 20+
-- TypeScript (strict mode)
-- NestJS
-- PostgreSQL
-- Drizzle ORM
-- class-validator / class-transformer
-- Swagger/OpenAPI
-- Docker Compose
-- Redis
+* Node.js 20+
+* TypeScript (`strict`)
+* NestJS
+* PostgreSQL
+* Drizzle ORM
+* Redis
+* class-validator / class-transformer
+* Swagger / OpenAPI
+* Docker Compose
 
-## Requisitos
+## Requisitos atendidos
 
 ### Funcionais
-- Criar short URL
-- Obter URL original por short code
-- Atualizar short URL
-- Deletar short URL
-- Consultar estatísticas de acesso
+
+* Criar short URL
+* Obter URL original por short code
+* Atualizar short URL
+* Deletar short URL
+* Consultar estatísticas de acesso
 
 ### Não funcionais
-- Rate limit: 12 req/min por IP em POST /shorten e GET /shorten/:shortCode (Throttler + Redis)
-- Cache Redis para consultas por shortCode; invalidação em PUT e DELETE
-- Validação com DTOs (class-validator); ValidationPipe global (`transform`, `whitelist`); `shortCode` validado por pipe dedicado
-- Throttler distribuído via Redis (contador compartilhado entre instâncias)
 
-### Análise técnica de capacidade
-Com a arquitetura proposta utilizando PostgreSQL, o limite seguro de armazenamento comporta até 1,75 milhão de registros (3 KB/linha), o que representa aproximadamente 958 inserções por dia ao longo de 5 anos. A partir deste horizonte, recomenda-se adotar uma das seguintes abordagens:
+* Rate limit de **12 req/min por IP** em `POST /shorten` e `GET /shorten/:shortCode`, com Throttler usando Redis como storage compartilhado
+* Cache Redis para consultas por `shortCode`, com invalidação em `PUT` e `DELETE`
+* Validação com DTOs usando `class-validator`, `class-transformer` e `ValidationPipe` global
+* Validação dedicada do parâmetro `shortCode` via pipe específico
+* Suporte a throttling distribuído entre múltiplas instâncias
 
-- Migrar para um banco com escala horizontal (MongoDB Cluster, Cassandra, DynamoDB, PostgresSQL sharding - Citus)
-- Implementar expiração automática de registros por inatividade (sem cliques registrados), seguindo uma política em camadas:
-  - **1 ano** — registros de uso pontual ou campanhas curtas
-  - **2 anos** — cobre bem campanhas recorrentes e QR codes em materiais impressos
-  - **3 anos** *(recomendado como padrão)* — limiar seguro para itens "quase permanentes", equilibrando retenção útil e limpeza de base
-- Remover registros antigos periodicamente via job agendado
-- Particionar a tabela por data (table partitioning nativo do PostgreSQL)
-- Arquivar registros frios em armazenamento barato (S3 + Athena)
+## Antes de entrar na arquitetura
 
-### Detalhes críticos (evitar dor de cabeça)
-- **Proxy**: Se a API estiver atrás de proxy (nginx, load balancer), configurar `trust proxy` no adapter HTTP para que o IP real venha de `X-Forwarded-For`. Sem isso, todos os clientes são vistos como o mesmo IP (o do proxy) e o rate limit não funciona por usuário.
-- **Redis para rate limit**: Se Redis cair, o Throttler pode degradar; cache retorna miss e vai ao DB.
+Esse projeto foi estruturado com uma preocupação bem pragmática: manter o código legível sem sacrificar decisões importantes de engenharia.
 
-### Regras de negócio
+Por isso, a base foi organizada por domínio/feature, com regras de negócio concentradas nos use cases, controllers finos, acesso a dados encapsulado via repositórios e contratos HTTP bem definidos. Não foi uma tentativa de “encaixar todas as siglas possíveis”; foi mais uma busca por equilíbrio entre clareza, isolamento de responsabilidade e custo de manutenção.
 
-**Aplicadas no código**
-- URL válida (formato URI) em POST e PUT; validação em DTOs
-- ShortCode único: gerado por ID sequencial (Redis INCR) + Base62; constraint UNIQUE no banco
-- ShortCode 4-8 caracteres, apenas alfanuméricos; validado em parâmetros
-- Idempotência em POST: mesma URL retorna shortCode existente (201)
-- accessCount nunca negativo (check constraint); incremento atômico no DB
-- Cache invalidado em PUT e DELETE
+A filosofia aqui foi bem simples:
 
-**Não aplicadas (podem causar dúvidas)**
-- URL não é normalizada: `https://example.com`, `https://example.com/` e `https://www.example.com` são tratadas como distintas
-- Sem autenticação: qualquer um pode criar, editar e deletar qualquer shortCode
+* deixar o fluxo fácil de seguir
+* evitar acoplamento desnecessário
+* proteger a borda HTTP
+* preparar a aplicação para crescer sem precisar desmontar tudo depois
 
-**Melhorias de requisitos (a implementar)**
-- Normalização de URL antes de criar/atualizar
-- Autenticação/autorização para operações de escrita (PUT, DELETE)
-- Performance: avaliar migração do adapter HTTP de Express para Fastify para melhor throughput sob alta carga
+## Arquitetura e soluções adotadas
 
-## Arquitetura e Soluções
+A modelagem do projeto segue uma visão de contexto, containers, componentes e fluxo interno. Os diagramas abaixo ajudam a visualizar como as peças conversam entre si.
 
-O projeto foi desenhado buscando uma forte consistência estrutural. Abaixo detalhamos a modelagem através da visão de Contexto, Container, Componentes e Fluxo Interno.
+### 1. Diagrama de contexto
 
-### 1. Diagrama de Contexto
 ```mermaid
 flowchart LR
     User[Cliente API / Frontend] --> API[URL Shortening API]
@@ -86,7 +83,8 @@ flowchart LR
     Swagger --> API
 ```
 
-### 2. Diagrama de Container
+### 2. Diagrama de container
+
 ```mermaid
 flowchart TB
     Client[Cliente HTTP / Frontend]
@@ -105,7 +103,8 @@ flowchart TB
     NestApi --> Obs
 ```
 
-### 3. Diagrama de Componente (Módulo: `short-url`)
+### 3. Diagrama de componente (`short-url`)
+
 ```mermaid
 flowchart LR
     RequestContext[RequestContextInterceptor]
@@ -143,7 +142,8 @@ flowchart LR
     Logging -.->|correlacao| OTel
 ```
 
-### 4. Fluxo Interno da Aplicação (Code Diagram)
+### 4. Fluxo interno da aplicação
+
 ```mermaid
 flowchart TD
     A[HTTP Request] --> B[RequestContext trace-id/request-id]
@@ -161,10 +161,12 @@ flowchart TD
     C -.->|logs estruturados| OTel
 ```
 
-Ordem real no NestJS (resumo): middleware, **guards** (por exemplo `SecurityInputGuard`, `ThrottlerGuard`), interceptors de pré-execução, **pipes** (`ValidationPipe` global e pipe de `shortCode`), e então o método do controller. O fluxograma acima é uma visão lógica simplificada, não a sequência exata.
+Na execução real do NestJS, a ordem passa por middleware, guards, interceptors de pré-execução, pipes e então o método do controller. O fluxo acima é uma visão lógica para facilitar leitura e entendimento do desenho.
 
-## Modelo de Dados (ER)
-Estrutura simples e objetiva em uma única tabela para suprir a necessidade de rastreio de URLs curtas e cliques totais.
+## Modelo de dados
+
+A modelagem foi mantida simples, direta e suficiente para o escopo da feature.
+
 ```mermaid
 erDiagram
     SHORT_URLS {
@@ -177,50 +179,108 @@ erDiagram
     }
 ```
 
-## Escalabilidade e Segurança
+Uma única tabela resolve bem o domínio principal aqui: URL original, código curto, contagem de acessos e timestamps de controle.
 
-O projeto adotou as seguintes práticas visando controle de concorrência massiva e proteção superficial de ataques comuns:
+## Regras de negócio
+
+### Aplicadas no código
+
+* URL válida em `POST` e `PUT`, validada em DTOs
+* `shortCode` único, gerado a partir de ID sequencial (`Redis INCR`) + Base62
+* Constraint `UNIQUE` no banco para reforço de integridade
+* `shortCode` com 4 a 8 caracteres alfanuméricos
+* Idempotência em `POST`: a mesma URL retorna o mesmo `shortCode` já existente
+* `accessCount` nunca negativo, protegido por regra e check constraint
+* Incremento de acesso feito de forma atômica no banco
+* Cache invalidado em `PUT` e `DELETE`
+
+### Deliberadamente fora do escopo
+
+Alguns pontos ficaram de fora de propósito, porque preferi manter o desafio bem resolvido antes de ampliar responsabilidade:
+
+* A URL não é normalizada antes de persistir
+
+  * `https://example.com`, `https://example.com/` e `https://www.example.com` são tratadas como entradas diferentes
+* Não há autenticação/autorização
+
+  * qualquer cliente pode criar, editar e deletar qualquer short code
+
+### Próximos passos naturais
+
+Se essa API fosse continuar evoluindo, os primeiros passos que eu atacaria seriam:
+
+* normalização de URL antes de criar ou atualizar
+* autenticação/autorização para operações de escrita
+* avaliação de migração do adapter HTTP de Express para Fastify em cenários de throughput mais agressivos
+
+## Escalabilidade e segurança
+
+Mesmo sendo um desafio técnico, eu preferi não tratar escalabilidade e segurança como “assunto para depois”. Não precisava resolver o mundo, mas fazia sentido deixar a base preparada para cenários mais realistas.
 
 ### Escalabilidade
-- **Stateless API:** A API baseada em NestJS não retém estado na sua infraestrutura, os controles e cachês em requisições intensas são deslocados para serviços externos como o Redis, permitindo instanciar "N" réplicas no provisionamento cloud via Load Balancer.
-- **Throttling Distribuído e Cache:** O Rate Limit utiliza o Redis como storage permitindo que o limite de bloqueio por IP ou chaves customizadas seja globalizado em todas as instâncias da API.
-- **Isolamento e Índices do Banco:** A criação do índice simples e das constraints de integridade no banco delegam do motor NodeJS a responsabilidade de travar acessos concorrentes para criar nomes (short codes) já existentes.
+
+* **API stateless**: a aplicação não depende de estado local para funcionar, o que facilita replicação horizontal
+* **Redis como apoio operacional**: rate limit e cache ficam fora da instância da API, o que ajuda quando há múltiplas réplicas
+* **Banco com integridade explícita**: índices e constraints ajudam a empurrar para a camada certa a responsabilidade sobre consistência concorrente
+* **Cache com invalidação clara**: leitura por `shortCode` ganha desempenho sem perder coerência nas operações de escrita
 
 ### Segurança
-- **Proteção do Endpoint e Headers:** A biblioteca `Helmet` embutida garante proteções contra Clickjacking (X-Frame-Options), restrições MIME e Sniffing de conteúdo, enquanto mantemos o `x-powered-by` oculto para ofuscar o Stack técnico utilizado. As regras de CORS são rigorosas para bloquear requests não autorizados num front-end externo.
-- **Segurança Intransigente de Entrada:** Um Guard global inspeciona `body`, `params`, `query` e headers customizados e rejeita com `HTTP 400` qualquer payload suspeito. Cobertura: XSS (incluindo bypass por encoding URL e entidades HTML), data: URI perigosos (`text/html`, `text/javascript`, `image/svg+xml`), SQLi como defesa em profundidade. Headers padrao (Authorization, Content-Type, etc.) sao ignorados para reduzir falsos positivos.
-- **Validação de contrato (DTOs):** O ValidationPipe global aplica class-validator nos bodies tipados; o parâmetro `shortCode` usa pipe dedicado com as mesmas regras de domínio antes dos Use Cases. O SecurityInputGuard permanece apenas como política transversal de rejeição de padrões perigosos (ordem: guard antes dos pipes).
-- **Query Builds Seguras e Tratamento Drizzle:** Proteção contra SQL injections nativamente implementadas no uso restrito dos Query Builders. Não utilizamos concatenações abertas para evitar execução indevida. O Drizzle mapeia apenas tabelas autorizadas na memória e oculta relatórios de erro do DB.
 
-## Observabilidade (compliance e rastreabilidade)
+* **Helmet** para endurecimento básico de headers HTTP
+* **CORS** controlado para reduzir exposição desnecessária
+* **ValidationPipe global** com `transform` e `whitelist`
+* **Pipe dedicado para `shortCode`** antes da entrada nos use cases
+* **Guard global para padrões suspeitos** em `body`, `params`, `query` e alguns headers customizados
+* **Defesa em profundidade contra entradas maliciosas**, incluindo padrões de XSS, payloads perigosos via `data:` URI e sinais comuns de SQL injection
+* **Uso restrito do query builder do Drizzle**, evitando concatenação aberta e reduzindo risco de SQL injection
 
-A observabilidade foi pensada desde o início: instrumentar cedo evita retrabalho quando compliance ou escala exigirem rastreabilidade completa. A escolha por OpenTelemetry (padrão CNCF) garante portabilidade - não ficamos presos a um fornecedor.
+A ideia aqui não foi vender uma “fortaleza impenetrável”, e sim demonstrar cuidado real com a borda HTTP e com o que costuma quebrar primeiro quando um sistema sai do happy path.
 
-**Por que OpenTelemetry**
-- Padrão aberto, sem lock-in; instrumentação pronta para qualquer consumidor OTLP.
-- Decisão de backend (SaaS vs self-hosted) pode ser tomada depois, com base em custo e política de dados.
+## Observabilidade
 
-**Realidade da persistência**
+A aplicação já sobe preparada para rastreabilidade mínima com OpenTelemetry. Eu gosto dessa abordagem porque ela evita retrabalho: mesmo num projeto pequeno, deixar contexto distribuído e correlação de logs prontos desde cedo costuma pagar a conta mais adiante.
 
-| Cenário | Valor |
-|---------|-------|
-| Sem backend OTLP e sem agregação de logs | Limitado: correlação apenas durante a vida do request |
-| Sem backend OTLP, com agregação de logs (CloudWatch, Loki, etc.) | Médio: logs com request-id permitem busca e correlação |
-| Com backend OTLP configurado | Completo: traces persistidos, rastreabilidade ponta a ponta |
+### O que já está preparado
 
-A instrumentação é carregada via `-r ./dist/instrumentation.js` antes do bootstrap NestJS (`start:prod`). Na prática, isso permite propagar contexto distribuído, exportar traces, correlacionar logs estruturados por `traceId` e `requestId` e deixar a aplicação pronta para evoluir a telemetria via OTLP sem lock-in. O valor pleno depende de conectar um consumidor (OTLP ou agregação de logs).
+* propagação de contexto distribuído
+* correlação por `traceId` e `requestId`
+* headers de resposta `X-Trace-Id` e `X-Request-Id`
+* exportação via OTLP
+* base pronta para integrar com Jaeger, Tempo, Collector ou provedores SaaS
 
-**Consumidores compatíveis** (via OTLP): OpenTelemetry Collector, Jaeger, Grafana Tempo; SaaS: Datadog, Honeycomb, New Relic, SigNoz. Basta configurar `OTEL_EXPORTER_OTLP_ENDPOINT`.
+### Realidade prática
 
-**Detalhes técnicos**
-- **Correlação**: trace-id (W3C) e request-id em logs estruturados e headers de resposta (`X-Trace-Id`, `X-Request-Id`).
-- **Eventos auditáveis**: criação, atualização, exclusão e acesso a short URLs; erros HTTP 4xx/5xx. A auditoria é feita via correlação de logs estruturados (method, path, statusCode) e traces automáticos.
-- **Governança**: mascaramento de dados sensíveis via `LOG_REDACT_SENSITIVE`; retenção e acesso definidos pelo backend de telemetria (SaaS ou self-hosted).
-- **Variáveis opcionais**: `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_EXPORTER` (none para desabilitar).
+| Cenário                                     | Valor                                      |
+| ------------------------------------------- | ------------------------------------------ |
+| Sem backend OTLP e sem agregação de logs    | Correlação limitada ao ciclo da requisição |
+| Sem backend OTLP, mas com agregação de logs | Busca e correlação por request-id          |
+| Com backend OTLP configurado                | Rastreabilidade ponta a ponta              |
+
+A instrumentação é carregada antes do bootstrap da aplicação via `-r ./dist/instrumentation.js` no `start:prod`, deixando o serviço pronto para evoluir a telemetria sem lock-in de fornecedor.
+
+Consumidores compatíveis via OTLP incluem OpenTelemetry Collector, Jaeger, Grafana Tempo, além de serviços como Datadog, Honeycomb, New Relic e SigNoz.
+
+## Análise técnica de capacidade
+
+Com a arquitetura atual e assumindo aproximadamente **3 KB por linha**, o limite seguro projetado fica em torno de **1,75 milhão de registros**, o que daria algo próximo de **958 inserções por dia ao longo de 5 anos**.
+
+Esse número obviamente depende de premissas, mas já serve como régua de planejamento. A partir daí, algumas estratégias naturais seriam:
+
+* expiração automática por inatividade
+* remoção periódica de registros antigos
+* particionamento por data no PostgreSQL
+* arquivamento de dados frios
+* ou, em um cenário realmente mais agressivo, migração para uma solução com escala horizontal mais natural
+
+Política de retenção possível por camadas:
+
+* **1 ano** para links de uso pontual
+* **2 anos** para campanhas recorrentes
+* **3 anos** como padrão razoável para itens quase permanentes
 
 ## Estrutura do projeto
 
-```
+```text
 src/
   modules/short-url/     # Domínio short-url
     domain/              # Entidades, value objects, erros
@@ -232,41 +292,52 @@ src/
   infra/                 # Database, migrations
 ```
 
-Organização por feature/domínio. Regras de negócio nos use cases; controller apenas orquestra. Acesso a dados via repositório.
+A organização é por feature/domínio. Regras de negócio vivem nos use cases; controllers apenas orquestram; persistência fica atrás de abstrações claras.
 
 ## Pré-requisitos
 
-- Docker e Docker Compose
-- Node.js 20+ (para rodar fora dos containers)
-- npm
+* Docker e Docker Compose
+* Node.js 20+
+* npm
 
-## Configuração de environment
+## Configuração de ambiente
 
 1. Copie o arquivo de exemplo:
-   ```bash
-   cp .env.example .env
-   ```
-2. Ajuste valores conforme necessário. Variáveis obrigatórias: `DB_*`, `REDIS_*`, `APP_*`. O boot falha se env estiver inválida.
-3. Para testes: existe `.env.test`; testes de integração e e2e usam esse arquivo automaticamente.
+
+```bash
+cp .env.example .env
+```
+
+2. Ajuste os valores conforme necessário. Variáveis obrigatórias: `DB_*`, `REDIS_*`, `APP_*`.
+3. Para testes, existe `.env.test`; integração e e2e usam esse arquivo automaticamente.
 
 ## Como subir localmente
 
-1. Configure o env (ver seção anterior).
-2. Instale dependências (necessário para migrations e comandos locais):
-   ```bash
-   npm install
-   ```
-3. Suba a infraestrutura:
-   ```bash
-   docker compose up -d
-   ```
-4. Aplique as migrations:
-   ```bash
-   npm run db:migrate
-   ```
-5. A API sobe no container com hot reload. Swagger em http://localhost:3000/api/docs.
+1. Instale as dependências:
 
-Para rodar a API fora do container (com postgres e Redis já no ar via Docker):
+```bash
+npm install
+```
+
+2. Suba a infraestrutura:
+
+```bash
+docker compose up -d
+```
+
+3. Rode as migrations:
+
+```bash
+npm run db:migrate
+```
+
+4. Acesse a documentação Swagger em:
+
+```text
+http://localhost:3000/api/docs
+```
+
+Para rodar a API fora do container, com PostgreSQL e Redis já de pé via Docker:
 
 ```bash
 npm install
@@ -276,144 +347,162 @@ npm run start:dev
 
 ## Comandos úteis
 
-| Comando | Descrição |
-|---------|-----------|
-| `docker compose up -d` | Sobe ambiente (api, postgres, redis) |
-| `docker compose down` | Derruba ambiente |
-| `npm run docker:api:refresh` | Rebuild e recria container da API com codigo e dependencias atualizados |
-| `npm run start:dev` | App em modo dev (watch) |
-| `npm run build` | Build de produção |
-| `npm run start:prod` | Executa build com instrumentação OpenTelemetry (`-r ./dist/instrumentation.js`) |
-| `npm run format` | Prettier (formata arquivos) |
-| `npm run format:check` | Prettier (valida sem alterar) |
-| `npm run lint` | ESLint (validação) |
-| `npm run lint:fix` | ESLint (corrige automaticamente) |
-| `npm run typecheck` | Checagem de tipos (tsc --noEmit) |
-| `npm run test` | Testes unitários |
-| `npm run test:unit` | Alias para testes unitários |
-| `npm run test:integration` | Testes de integração |
-| `npm run test:e2e` | Testes HTTP/e2e |
-| `npm run test:http` | Alias para test:e2e |
-| `npm run test:all` | Unit + integration + e2e |
-| `npm run db:generate` | Gera migration a partir do schema |
-| `npm run db:migrate` | Aplica migrations pendentes |
-| `npm run db:create-test` | Cria banco `short_url_test` (para testes) |
-| `npm run clear` | Remove artefatos locais (`node_modules`, `dist`, `coverage*`) |
-| `npm run reset` | Executa `clear` e remove `package-lock.json` |
+| Comando                      | Descrição                                         |
+| ---------------------------- | ------------------------------------------------- |
+| `docker compose up -d`       | Sobe api, postgres e redis                        |
+| `docker compose down`        | Derruba ambiente                                  |
+| `npm run docker:api:refresh` | Rebuild e recria o container da API               |
+| `npm run start:dev`          | App em modo desenvolvimento                       |
+| `npm run build`              | Build de produção                                 |
+| `npm run start:prod`         | Executa build com instrumentação OpenTelemetry    |
+| `npm run format`             | Formata arquivos com Prettier                     |
+| `npm run format:check`       | Valida formatação sem alterar arquivos            |
+| `npm run lint`               | Executa ESLint                                    |
+| `npm run lint:fix`           | Corrige automaticamente problemas simples de lint |
+| `npm run typecheck`          | Executa checagem de tipos                         |
+| `npm run test`               | Testes unitários                                  |
+| `npm run test:unit`          | Alias para unitários                              |
+| `npm run test:integration`   | Testes de integração                              |
+| `npm run test:e2e`           | Testes end-to-end                                 |
+| `npm run test:http`          | Alias para e2e                                    |
+| `npm run test:all`           | Unit + integration + e2e                          |
+| `npm run db:generate`        | Gera migration a partir do schema                 |
+| `npm run db:migrate`         | Aplica migrations pendentes                       |
+| `npm run db:create-test`     | Cria banco de teste                               |
+| `npm run clear`              | Remove artefatos locais                           |
+| `npm run reset`              | Limpa artefatos e remove lockfile                 |
 
-White flag: os scripts `clear` e `reset` usam Node (`node -e`) em vez de shell para manter comportamento consistente entre sistemas operacionais e evitar variações de comando entre Linux/macOS/Windows.
+Os scripts `clear` e `reset` usam Node em vez de shell para manter comportamento consistente entre Linux, macOS e Windows.
 
-## Redis
+## Redis no projeto
 
-O Redis e usado para **cache** e **seguranca**:
+O Redis entra aqui com dois papéis principais:
 
-- **Rate limit distribuido**: Throttler com storage Redis; 12 req/min por IP em POST /shorten e GET /shorten/:shortCode
-- **Cache**: consultas `findByShortCode` cacheadas com TTL configurável (`CACHE_TTL_SECONDS`); invalidacao em PUT e DELETE
-- **Health**: `/api/health/ready` inclui Redis; retorna `degraded` se Redis estiver down
+* **rate limit distribuído**
+* **cache de leitura por `shortCode`**
 
-Variaveis: `REDIS_*`, `CACHE_TTL_SECONDS` (opcional, default 60).
+Além disso, o readiness check considera Redis, e a aplicação pode sinalizar estado degradado quando esse componente estiver indisponível.
+
+Variáveis relacionadas: `REDIS_*` e `CACHE_TTL_SECONDS` (opcional, com default 60).
 
 ## Banco de dados e migrations
 
-- Banco: PostgreSQL
-- ORM: Drizzle
-- Migrations aplicadas via `npm run db:migrate`
-- Novas migrations: edite o schema em `src/infra/database/schema/`, depois `npm run db:generate`
-- **Não edite migrations já aplicadas**
-- Seed: não implementado neste projeto
+* Banco relacional: PostgreSQL
+* ORM: Drizzle
+* Migrations aplicadas via `npm run db:migrate`
+* Novas migrations: ajustar schema em `src/infra/database/schema/` e executar `npm run db:generate`
+* Migrations já aplicadas não devem ser editadas
+* Seed não foi implementado neste projeto
 
-## Testes e Cobertura (TDD)
+## Testes e cobertura
 
-Toda essa feature foi construída estruturada na metodologia **Test-Driven Development (TDD)** focada na robustez e confiabilidade dos cenários base e fluxos alternativos da implementação do encurtador. Esta arquitetura reflete uma pirâmide abrangente:
+Esse projeto foi desenvolvido com bastante apoio de **TDD**, principalmente na camada de regras de negócio e no desenho dos cenários principais.
 
-### 1. Unitários (Regras de Domínio/Aplicação)
+### Unitários
 
-Rodam rapidamente em memória, abstraindo o contato de dependências reais (como Banco/Rede). Testamos pesadamente as regras dos UseCases usando um Repository "In-Memory" para cobrir 100% de cenários críticos.
+Rodam rápido, isolam regras de domínio/aplicação e usam repositório em memória para validar comportamento sem depender de banco ou rede.
+
 ```bash
 npm run test
 ```
-Arquivos: `src/**/*.spec.ts`.
 
-### 2. Integração e E2E (Casos de uso completos e HTTP)
+Arquivos: `src/**/*.spec.ts`
 
-Os testes de integração focam na comunicação e comportamento persistente do Repositório (Drizzle) diretamente num banco efêmero de testes.
-Em paralelo, os testes E2E validam fluxos da camada externa em diante, testando inclusive Headers HTTP e os erros formatados pelo Exception Filter, batendo do endpoint HTTP montado até o Banco.
+### Integração e e2e
 
-Testes de integração (repositório contra banco real) e e2e (API completa via supertest) precisam de **PostgreSQL** e **Redis** rodando. Usam `.env.test` e o banco `short_url_test`.
+Os testes de integração validam o repositório contra banco real. Já os e2e exercitam a aplicação pela borda HTTP, incluindo headers, filtros e comportamento externo esperado.
 
-**Passo a passo para rodar integration e e2e:**
+Para integração e e2e, é necessário ter PostgreSQL e Redis disponíveis.
 
-1. Suba apenas postgres e redis (sem a API):
-   ```bash
-   docker compose up -d postgres redis
-   ```
+### Passo a passo
+
+1. Suba postgres e redis:
+
+```bash
+docker compose up -d postgres redis
+```
 
 2. Crie o banco de teste:
-   ```bash
-   npm run db:create-test
-   ```
-   (ou `docker compose run --rm create-test-db`)
 
-3. Execute os testes Específicos:
-   ```bash
-   npm run test:integration   # Repositório + banco de teste
-   npm run test:e2e           # API completa acoplada HTTP supertest
-   ```
+```bash
+npm run db:create-test
+```
 
-   Ou ambos os escopos integrados: `npm run test:all`
+3. Rode os testes desejados:
 
-**Observações Técnicas:**
-- Os testes e2e bootam a aplicação NestJS em memória e fazem requisições simuladas via supertest; não é necessário rodar "npm run start" em background na maioria dos casos.
-- O `.env.test` aponta para `localhost:5432` e `localhost:6379`; o Docker Compose expõe essas portas automaticamente nos serviços.
-- Se o postgres isolado de teste ou o container do redis não estiverem acessíveis, eles apresentarão erro de pool conectction e falharão propositalmente.
+```bash
+npm run test:integration
+npm run test:e2e
+```
+
+Ou tudo junto:
+
+```bash
+npm run test:all
+```
+
+### Resumo factual da suíte atual
+
+| Escopo     | Quantidade de testes | Cobertura atual na aplicação                                       |
+| ---------- | -------------------- | ------------------------------------------------------------------ |
+| Unitário   | 85                   | 37.74% statements, 31.22% branches, 27.65% functions, 37.68% lines |
+| Integração | 15                   | 14.54% statements, 14.70% branches, 16.83% functions, 14.34% lines |
+| E2E        | 17                   | 46.98% statements, 54.52% branches, 38.04% functions, 45.68% lines |
+
+Essas coberturas foram geradas por escopo isolado, e não por merge de relatórios.
 
 ## Swagger
 
-- URL local: http://localhost:3000/api/docs
-- Requer a aplicação rodando
-- Documentação interativa da API
+* URL local: `http://localhost:3000/api/docs`
+* Requer a aplicação rodando
+* Documentação interativa da API
 
 ## Convenções do projeto
 
-- Organização por feature/domínio
-- Separação explícita entre `domain`, `application`, `http` e `infra` dentro do módulo
-- Imports absolutos via aliases `@config`, `@infra`, `@shared` e `@modules`; `./` fica restrito ao mesmo diretório ou filhos
-- Validação com class-validator nos contracts (DTOs); `exceptionFactory` alinha erros ao código `VALIDATION_ERROR`
-- `ValidationPipe` global para body tipado e pipe dedicado para `shortCode`; o `SecurityInputGuard` atua como proteção transversal na borda HTTP
-- Regras de negócio nos use cases, não no controller
-- Acesso a banco via repositório (interface no domain), com porta de persistência no domínio e adaptadores concretos na infraestrutura
-- TypeScript strict mode
-- `noUncheckedIndexedAccess` habilitado e contratos públicos mantidos tipados
-- Contratos HTTP tipados e documentados com Swagger
+* Organização por feature/domínio
+* Separação explícita entre `domain`, `application`, `http` e `infra`
+* Imports absolutos via aliases `@config`, `@infra`, `@shared` e `@modules`
+* Validação com `class-validator` nos DTOs
+* `ValidationPipe` global para bodies tipados
+* Pipe dedicado para `shortCode`
+* `SecurityInputGuard` como proteção transversal na borda HTTP
+* Regras de negócio nos use cases, não nos controllers
+* Persistência via repositório, com portas no domínio e adaptadores na infraestrutura
+* TypeScript em modo `strict`
+* Contratos HTTP tipados e documentados via Swagger
 
-No desenho do código, segui KISS e YAGNI de forma bem pragmática: bootstrap mínimo, módulos pequenos, abstrações só quando já se pagavam e nada de camadas extras por vaidade. A estrutura resultante é uma arquitetura em camadas inspirada em Clean Architecture, com porta de persistência e adaptadores na infraestrutura; o foco aqui foi clareza e responsabilidade única, não aderência dogmática a rótulos.
+No desenho do código, segui KISS e YAGNI de forma bastante pragmática. A intenção não foi “dogmatizar” Clean Architecture, e sim usar o que fazia sentido para manter o projeto claro, modular e sustentável.
 
-## Fluxo de qualidade (antes de PR)
+## Fluxo de qualidade antes de PR
 
-Execute localmente (ordem recomendada):
+A sequência recomendada para validação local é:
 
 ```bash
-npm run format          # quando necessário
+npm run format
 npm run lint
 npm run typecheck
 npm run test:all
 npm run build
 ```
 
-Commits devem seguir [Conventional Commits](https://www.conventionalcommits.org/): `tipo(escopo): descrição` (ex: `feat(short-url): add create endpoint`).
+Os commits seguem o padrão [Conventional Commits](https://www.conventionalcommits.org/):
+
+```text
+tipo(escopo): descrição
+```
+
+Exemplo:
+
+```text
+feat(short-url): add create endpoint
+```
 
 ## Fechamento
 
-Se você quiser entender a linha de raciocínio do projeto antes de entrar no código, comece pelo [planejamento arquitetural](docs/planejamento_feature_url_shortener_c_4.md). Ele mostra o desenho original da solução, os diagramas C4, o plano incremental e quais escolhas ficaram deliberadamente fora do escopo inicial.
+Se você quiser entender primeiro a linha de raciocínio da solução antes de sair navegando pelo código, o melhor ponto de entrada continua sendo o [planejamento arquitetural](docs/planejamento_feature_url_shortener_c_4.md). Ele mostra o desenho original da feature, os diagramas C4, a estratégia incremental e os trade-offs assumidos no caminho.
 
-No dia a dia, costumo usar KISS como guia principal e YAGNI como mantra, e neste projeto levei isso a sério. O único "paradoxo consciente" foi manter `/api/health/live` e a base de observabilidade com OpenTelemetry mesmo indo além do mínimo do desafio: eu prefiro subir qualquer serviço com uma garantia simples de liveness/readiness e com rastreabilidade mínima desde o começo. Aqui, o OpenTelemetry entra para propagar contexto distribuído, exportar traces, correlacionar logs por `traceId` e `requestId` e deixar a aplicação pronta para evoluir telemetria sem acoplamento a fornecedor.
+No fim das contas, este projeto é sobre uma coisa bem simples: pegar um problema pequeno, comum e aparentemente direto, e tratá-lo com o nível de cuidado que normalmente só aparece quando o software começa a crescer. Foi esse o espírito aqui.
 
-Resumo factual da suíte atual, medido na execução local deste repositório:
+---
 
-| Escopo | Quantidade de testes | Cobertura atual na aplicação |
-|--------|----------------------|------------------------------|
-| Unitário | 85 | 37.74% statements, 31.22% branches, 27.65% functions, 37.68% lines |
-| Integração | 15 | 14.54% statements, 14.70% branches, 16.83% functions, 14.34% lines |
-| E2E | 17 | 46.98% statements, 54.52% branches, 38.04% functions, 45.68% lines |
-
-As coberturas acima foram geradas por escopo isolado, não por merge de relatórios. Os comandos usados foram `npm run test:cov`, `jest --config ./test/jest-integration.json --runInBand --coverage` e `jest --config ./test/jest-e2e.json --runInBand --coverage`.
+Se esse README compilou bem por aí, talvez valha um `git clone` no meu [GitHub](https://github.com/joisiney) e uma passada no meu [LinkedIn](https://www.linkedin.com/in/joisiney/): tem mais projetos, mais contexto e alguns commits extras de teimosia saudável com arquitetura e código bem pensado.
