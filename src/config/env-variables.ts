@@ -307,7 +307,7 @@ export class EnvVariables {
     const s = envScalarToString(value).trim();
     return s === '' ? undefined : s;
   })
-  @ValidateIf((_, v) => v !== undefined)
+  @ValidateIf((_: unknown, v: unknown) => v !== undefined)
   @IsString()
   OTEL_SERVICE_NAME?: string;
 
@@ -318,7 +318,7 @@ export class EnvVariables {
     }
     return envScalarToString(value);
   })
-  @ValidateIf((_, v) => v !== undefined && v !== '')
+  @ValidateIf((_: unknown, v: unknown) => v !== undefined && v !== '')
   @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
 

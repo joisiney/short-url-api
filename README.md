@@ -278,6 +278,7 @@ npm run start:dev
 |---------|-----------|
 | `docker compose up -d` | Sobe ambiente (api, postgres, redis) |
 | `docker compose down` | Derruba ambiente |
+| `npm run docker:api:refresh` | Rebuild e recria container da API com codigo e dependencias atualizados |
 | `npm run start:dev` | App em modo dev (watch) |
 | `npm run build` | Build de produção |
 | `npm run start:prod` | Executa build com instrumentação OpenTelemetry (`-r ./dist/instrumentation.js`) |
