@@ -9,6 +9,8 @@ import { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { trace } from '@opentelemetry/api';
 
+const W3C_TRACE_ID_HEX_LENGTH = 32;
+
 export interface RequestContext extends Request {
   requestId: string;
   correlationId: string;
@@ -34,7 +36,10 @@ export class RequestContextInterceptor implements NestInterceptor {
       if (traceparent) {
         const parts = traceparent.split('-');
         const traceIdPart = parts[1];
-        if (parts.length >= 2 && traceIdPart?.length === 32) {
+        if (
+          parts.length >= 2 &&
+          traceIdPart?.length === W3C_TRACE_ID_HEX_LENGTH
+        ) {
           request.traceId = traceIdPart;
         }
       }
