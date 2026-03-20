@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { json } from 'express';
@@ -11,6 +11,7 @@ import { AppConfig } from '../config/app.config';
 import type { LoggerConfig } from '../config/logger.config';
 
 import { AppExceptionFilter } from '../shared/http/filters/app-exception.filter';
+import { validationExceptionFactory } from '../shared/http/utils/validation-exception.factory';
 import { RequestContextInterceptor } from '../shared/http/interceptors/request-context.interceptor';
 import { LoggingInterceptor } from '../shared/http/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from '../shared/http/interceptors/timeout.interceptor';
@@ -29,6 +30,13 @@ export async function bootstrap() {
 
   // Global HTTP Shared Base
   app.useGlobalFilters(new AppExceptionFilter());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      exceptionFactory: validationExceptionFactory,
+    }),
+  );
   app.useGlobalInterceptors(
     new RequestContextInterceptor(),
     new LoggingInterceptor(loggerConfig),

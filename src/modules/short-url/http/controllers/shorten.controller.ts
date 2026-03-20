@@ -8,7 +8,6 @@ import {
   Body,
   HttpCode,
   HttpStatus,
-  UsePipes,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
@@ -24,7 +23,7 @@ import {
 
 import { ApiErrorResponse } from '../../../../shared/http/contracts/api-error.contract';
 
-import { ZodValidationPipe } from '../../../../shared/http/pipes/zod-validation.pipe';
+import { ShortCodeParamPipe } from '../../../../shared/http/pipes/short-code-param.pipe';
 
 import { CreateShortUrlUseCase } from '../../application/use-cases/create-short-url.use-case';
 import { GetShortUrlUseCase } from '../../application/use-cases/get-short-url.use-case';
@@ -32,17 +31,8 @@ import { UpdateShortUrlUseCase } from '../../application/use-cases/update-short-
 import { DeleteShortUrlUseCase } from '../../application/use-cases/delete-short-url.use-case';
 import { GetShortUrlStatsUseCase } from '../../application/use-cases/get-short-url-stats.use-case';
 
-import {
-  CreateShortUrlRequest,
-  createShortUrlSchema,
-} from '../contracts/create-short-url.request';
-import type { CreateShortUrlRequestDto } from '../contracts/create-short-url.request';
-import {
-  UpdateShortUrlRequest,
-  updateShortUrlSchema,
-} from '../contracts/update-short-url.request';
-import type { UpdateShortUrlRequestDto } from '../contracts/update-short-url.request';
-import { shortCodeSchema } from '../contracts/short-code.schema';
+import { CreateShortUrlRequest } from '../contracts/create-short-url.request';
+import { UpdateShortUrlRequest } from '../contracts/update-short-url.request';
 import { ShortUrlResponse } from '../contracts/short-url.response';
 import { ShortUrlStatsResponse } from '../contracts/short-url-stats.response';
 import { ShortUrlPresenter } from '../presenters/short-url.presenter';
@@ -94,10 +84,7 @@ export class ShortenController {
     type: ApiErrorResponse,
     description: 'Internal Server Error - falha inesperada',
   })
-  @UsePipes(new ZodValidationPipe(createShortUrlSchema))
-  async create(
-    @Body() body: CreateShortUrlRequestDto,
-  ): Promise<ShortUrlResponse> {
+  async create(@Body() body: CreateShortUrlRequest): Promise<ShortUrlResponse> {
     const result = await this.createShortUrl.execute({ url: body.url });
     return ShortUrlPresenter.toResponse(result);
   }
@@ -128,8 +115,7 @@ export class ShortenController {
     description: 'Internal Server Error - falha inesperada',
   })
   async findOne(
-    @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
-    shortCode: string,
+    @Param('shortCode', ShortCodeParamPipe) shortCode: string,
   ): Promise<ShortUrlResponse> {
     const result = await this.getShortUrl.execute({ shortCode });
 
@@ -177,10 +163,8 @@ export class ShortenController {
     description: 'Internal Server Error - falha inesperada',
   })
   async update(
-    @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
-    shortCode: string,
-    @Body(new ZodValidationPipe(updateShortUrlSchema))
-    body: UpdateShortUrlRequestDto,
+    @Param('shortCode', ShortCodeParamPipe) shortCode: string,
+    @Body() body: UpdateShortUrlRequest,
   ): Promise<ShortUrlResponse> {
     const result = await this.updateShortUrl.execute({
       shortCode,
@@ -230,8 +214,7 @@ export class ShortenController {
     description: 'Internal Server Error - falha inesperada',
   })
   async remove(
-    @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
-    shortCode: string,
+    @Param('shortCode', ShortCodeParamPipe) shortCode: string,
   ): Promise<void> {
     const result = await this.deleteShortUrl.execute({ shortCode });
 
@@ -271,8 +254,7 @@ export class ShortenController {
     description: 'Internal Server Error - falha inesperada',
   })
   async stats(
-    @Param('shortCode', new ZodValidationPipe(shortCodeSchema))
-    shortCode: string,
+    @Param('shortCode', ShortCodeParamPipe) shortCode: string,
   ): Promise<ShortUrlStatsResponse> {
     const result = await this.getShortUrlStats.execute({ shortCode });
 
