@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as shortUrlsSchema from './schema/short-urls.table';
-import { Env } from '../../config/env.schema';
+import type { Env } from '../../config/env-variables';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
