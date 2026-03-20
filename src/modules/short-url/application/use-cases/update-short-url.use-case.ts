@@ -1,10 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { Result, ResultUtils } from '../../../../shared/utils/result';
+import { Result, ResultUtils } from '@shared/utils/result';
 
-import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
-import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';
-import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
-import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shortened.error';
+import type { ShortUrlRepository } from '@modules/short-url/domain/repositories/short-url.repository';
+import { SHORT_URL_REPOSITORY } from '@modules/short-url/domain/repositories/short-url.repository';
+import { ShortUrlNotFoundError } from '@modules/short-url/domain/errors/short-url-not-found.error';
+import { UrlAlreadyShortenedError } from '@modules/short-url/domain/errors/url-already-shortened.error';
 
 export type UpdateShortUrlInput = {
   shortCode: string;

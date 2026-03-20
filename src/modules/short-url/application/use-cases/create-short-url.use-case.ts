@@ -1,10 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
 
-import type { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
-import { SHORT_URL_REPOSITORY } from '../../domain/repositories/short-url.repository';
-import { IdGeneratorService } from '../services/id-generator.service';
-import { Base62EncoderService } from '../services/base62-encoder.service';
-import { ShortUrl } from '../../domain/entities/short-url.entity';
+import type { ShortUrlRepository } from '@modules/short-url/domain/repositories/short-url.repository';
+import { SHORT_URL_REPOSITORY } from '@modules/short-url/domain/repositories/short-url.repository';
+import { IdGeneratorService } from '@modules/short-url/application/services/id-generator.service';
+import { Base62EncoderService } from '@modules/short-url/application/services/base62-encoder.service';
+import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
 
 export type CreateShortUrlInput = {
   url: string;

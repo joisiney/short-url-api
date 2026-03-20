@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '../../../../infra/redis/redis.service';
+import { RedisService } from '@infra/redis/redis.service';
 
 const REDIS_KEY = 'short_url:next_id';
 const INITIAL_ID = 14_000_000;

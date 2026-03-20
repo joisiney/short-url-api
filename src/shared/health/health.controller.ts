@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
-import { DatabaseService } from '../../infra/database/database.service';
-import { RedisService } from '../../infra/redis/redis.service';
+import { DatabaseService } from '@infra/database/database.service';
+import { RedisService } from '@infra/redis/redis.service';
 
 @Controller('health')
 export class HealthController {

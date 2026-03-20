@@ -1,0 +1,33 @@
+---
+description: Path aliases e convencoes de import do projeto
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# Path Aliases
+
+Todas as importacoes devem usar aliases absolutos, exceto imports do mesmo diretorio para frente (`./`).
+
+- `@config` / `@config/*` -> src/config
+- `@infra` / `@infra/*` -> src/infra
+- `@shared` / `@shared/*` -> src/shared
+- `@modules` / `@modules/*` -> src/modules
+
+## Regra
+
+- **Obrigatorio:** todo import que use `../` deve usar alias absoluto.
+- **Excecao:** imports com `./` (mesmo dir ou filhos) podem permanecer relativos.
+
+## Exemplos
+
+```typescript
+// Aliases (obrigatorio para ../)
+import { AppConfig } from '@config/app.config';
+import { RedisService } from '@infra/redis/redis.service';
+import { Result } from '@shared/utils/result';
+import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
+
+// Relativos permitidos (apenas ./ - mesmo dir ou filhos)
+import { CreateShortUrlUseCase } from './create-short-url.use-case';
+import { ShortUrlResponse } from '@modules/short-url/http/contracts/short-url.response';
+```

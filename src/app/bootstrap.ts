@@ -7,14 +7,14 @@ import helmet from 'helmet';
 import { json } from 'express';
 
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { AppConfig } from '../config/app.config';
-import type { LoggerConfig } from '../config/logger.config';
+import { AppConfig } from '@config/app.config';
+import type { LoggerConfig } from '@config/logger.config';
 
-import { AppExceptionFilter } from '../shared/http/filters/app-exception.filter';
-import { validationExceptionFactory } from '../shared/http/utils/validation-exception.factory';
-import { RequestContextInterceptor } from '../shared/http/interceptors/request-context.interceptor';
-import { LoggingInterceptor } from '../shared/http/interceptors/logging.interceptor';
-import { TimeoutInterceptor } from '../shared/http/interceptors/timeout.interceptor';
+import { AppExceptionFilter } from '@shared/http/filters/app-exception.filter';
+import { validationExceptionFactory } from '@shared/http/utils/validation-exception.factory';
+import { RequestContextInterceptor } from '@shared/http/interceptors/request-context.interceptor';
+import { LoggingInterceptor } from '@shared/http/interceptors/logging.interceptor';
+import { TimeoutInterceptor } from '@shared/http/interceptors/timeout.interceptor';
 
 export async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);

@@ -3,11 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import type {
   ShortUrlRepository,
   FindByShortCodeOptions,
-} from '../../domain/repositories/short-url.repository';
-import { ShortUrl } from '../../domain/entities/short-url.entity';
+} from '@modules/short-url/domain/repositories/short-url.repository';
+import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
 import { DrizzleShortUrlRepository } from './drizzle-short-url.repository';
-import { RedisService } from '../../../../infra/redis/redis.service';
-import type { RedisConfig } from '../../../../config/redis.config';
+import { RedisService } from '@infra/redis/redis.service';
+import type { RedisConfig } from '@config/redis.config';
 
 const CACHE_KEY_PREFIX = 'shorturl:';
 

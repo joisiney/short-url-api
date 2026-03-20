@@ -1,4 +1,4 @@
-import { PaginatedResponse } from '../contracts/paginated-response.contract';
+import { PaginatedResponse } from '@shared/http/contracts/paginated-response.contract';
 
 export function createPaginatedResponse<T>(
   items: T[],

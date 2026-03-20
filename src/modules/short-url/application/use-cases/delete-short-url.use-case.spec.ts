@@ -1,6 +1,6 @@
 import { DeleteShortUrlUseCase } from './delete-short-url.use-case';
-import { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
-import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+import { ShortUrlRepository } from '@modules/short-url/domain/repositories/short-url.repository';
+import { ShortUrlNotFoundError } from '@modules/short-url/domain/errors/short-url-not-found.error';
 
 function makeRepository(
   overrides: Partial<ShortUrlRepository> = {},

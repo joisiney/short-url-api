@@ -12,7 +12,7 @@ describe('IdGeneratorService', () => {
   function makeSut(): IdGeneratorService {
     const redisService = {
       getClient: () => mockRedis,
-    } as unknown as import('../../../../infra/redis/redis.service').RedisService;
+    } as unknown as import('@infra/redis/redis.service').RedisService;
     return new IdGeneratorService(redisService);
   }
 

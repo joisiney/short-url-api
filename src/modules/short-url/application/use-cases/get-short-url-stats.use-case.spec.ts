@@ -1,7 +1,7 @@
 import { GetShortUrlStatsUseCase } from './get-short-url-stats.use-case';
-import { ShortUrlRepository } from '../../domain/repositories/short-url.repository';
-import { ShortUrl } from '../../domain/entities/short-url.entity';
-import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
+import { ShortUrlRepository } from '@modules/short-url/domain/repositories/short-url.repository';
+import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
+import { ShortUrlNotFoundError } from '@modules/short-url/domain/errors/short-url-not-found.error';
 
 function makeShortUrl(overrides: Partial<ShortUrl> = {}): ShortUrl {
   return new ShortUrl({

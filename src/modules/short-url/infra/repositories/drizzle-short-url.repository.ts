@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import type {
   ShortUrlRepository,
   FindByShortCodeOptions,
-} from '../../domain/repositories/short-url.repository';
-import { ShortUrl } from '../../domain/entities/short-url.entity';
-import { DatabaseService } from '../../../../infra/database/database.service';
-import { shortUrls } from '../../../../infra/database/schema/short-urls.table';
+} from '@modules/short-url/domain/repositories/short-url.repository';
+import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
+import { DatabaseService } from '@infra/database/database.service';
+import { shortUrls } from '@infra/database/schema/short-urls.table';
 import { eq, sql } from 'drizzle-orm';
-import { ShortUrlPersistenceMapper } from '../mappers/short-url.persistence-mapper';
+import { ShortUrlPersistenceMapper } from '@modules/short-url/infra/mappers/short-url.persistence-mapper';
 
 @Injectable()
 export class DrizzleShortUrlRepository implements ShortUrlRepository {

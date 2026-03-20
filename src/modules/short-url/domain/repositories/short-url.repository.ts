@@ -1,4 +1,4 @@
-import { ShortUrl } from '../entities/short-url.entity';
+import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
 
 export const SHORT_URL_REPOSITORY = Symbol('SHORT_URL_REPOSITORY');
 

@@ -13,7 +13,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node -r ./dist/instrumentation.js dist/app/bootstrap",
+    "start:prod": "node -r tsconfig-paths/register -r ./dist/instrumentation.js dist/app/bootstrap",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "test": "jest",
@@ -92,6 +92,16 @@
       "ts"
     ],
     "rootDir": "src",
+    "moduleNameMapper": {
+      "^@config$": "<rootDir>/config",
+      "^@config/(.*)$": "<rootDir>/config/$1",
+      "^@infra$": "<rootDir>/infra",
+      "^@infra/(.*)$": "<rootDir>/infra/$1",
+      "^@shared$": "<rootDir>/shared",
+      "^@shared/(.*)$": "<rootDir>/shared/$1",
+      "^@modules$": "<rootDir>/modules",
+      "^@modules/(.*)$": "<rootDir>/modules/$1"
+    },
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"

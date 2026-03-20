@@ -9,8 +9,8 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Response } from 'express';
 import { RequestContext } from './request-context.interceptor';
-import { redactForLog } from '../../utils/redact.util';
-import type { LoggerConfig } from '../../../config/logger.config';
+import { redactForLog } from '@shared/utils/redact.util';
+import type { LoggerConfig } from '@config/logger.config';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {

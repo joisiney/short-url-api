@@ -1,0 +1,13 @@
+---
+description: Checklist apos cada tarefa de codigo
+alwaysApply: true
+---
+
+# Checklist Pos-Tarefa
+
+Apos concluir alteracoes de codigo:
+
+1. Executar `npm run lint:fix` para corrigir problemas de estilo
+2. Executar `npm test` para garantir que nada quebrou
+3. Se a tarefa envolveu integracao/DB: `npm run test:integration`
+4. Se a tarefa envolveu HTTP/e2e: `npm run test:e2e` ou `npm run test:http`
