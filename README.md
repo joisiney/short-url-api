@@ -5,7 +5,7 @@
 <br/>
 
 API REST de encurtamento de URLs. Permite criar, consultar, atualizar e remover URLs curtas, além de consultar estatísticas de acesso. 
-Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto foco em segurança, escalabilidade e qualidade guiada por **TDD (Test-Driven Development)**.
+Arquitetura orientada por domínio, tipagem estrita, validação na borda HTTP com **class-validator** e **class-transformer** (ValidationPipe global), parâmetro `shortCode` com pipe dedicado, e alto foco em segurança, escalabilidade e qualidade guiada por **TDD (Test-Driven Development)**.
 
 ## Stack
 
@@ -14,7 +14,7 @@ Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto 
 - NestJS
 - PostgreSQL
 - Drizzle ORM
-- Zod
+- class-validator / class-transformer
 - Swagger/OpenAPI
 - Docker Compose
 - Redis
@@ -31,7 +31,7 @@ Arquitetura orientada por domínio, tipagem estrita, validação com Zod e alto 
 ### Não funcionais
 - Rate limit: 12 req/min por IP em POST /shorten e GET /shorten/:shortCode (Throttler + Redis)
 - Cache Redis para consultas por shortCode; invalidação em PUT e DELETE
-- Validação Zod em payloads; schemas strict
+- Validação com DTOs (class-validator); ValidationPipe global (`transform`, `whitelist`); `shortCode` validado por pipe dedicado
 - Throttler distribuído via Redis (contador compartilhado entre instâncias)
 
 ### Análise técnica de capacidade
@@ -53,7 +53,7 @@ Com a arquitetura proposta utilizando PostgreSQL, o limite seguro de armazenamen
 ### Regras de negócio
 
 **Aplicadas no código**
-- URL válida (formato URI) em POST e PUT; validação Zod
+- URL válida (formato URI) em POST e PUT; validação em DTOs
 - ShortCode único: gerado por ID sequencial (Redis INCR) + Base62; constraint UNIQUE no banco
 - ShortCode 4-8 caracteres, apenas alfanuméricos; validado em parâmetros
 - Idempotência em POST: mesma URL retorna shortCode existente (201)
@@ -110,7 +110,7 @@ flowchart LR
     Logging[LoggingInterceptor]
     Controller[Controllers]
     Throttler[ThrottlerGuard]
-    ZodValidation[Zod Validation Pipe/Layer]
+    DtoValidation[ValidationPipe + DTOs e ShortCodeParamPipe]
     UseCases[Use Cases]
     Generator[ShortCodeGeneratorService]
     RepoPort[ShortUrlRepository Port]
@@ -126,8 +126,8 @@ flowchart LR
     Throttler --> RequestContext
     RequestContext --> Logging
     Logging --> Controller
-    Controller --> ZodValidation
-    ZodValidation --> UseCases
+    Controller --> DtoValidation
+    DtoValidation --> UseCases
     UseCases --> Generator
     UseCases --> RepoPort
     RepoPort --> CachedRepo
@@ -147,7 +147,7 @@ flowchart TD
     A[HTTP Request] --> B[RequestContext trace-id/request-id]
     B --> C[Logging Interceptor]
     C --> D[Controller]
-    D --> E[Validation Layer Zod]
+    D --> E[Validation Layer class-validator]
     E --> F[Use Case]
     F --> G[Domain Rules]
     F --> H[Repository Port]
@@ -158,6 +158,8 @@ flowchart TD
     B -.->|W3C Trace Context| OTel[OTel SDK]
     C -.->|logs estruturados| OTel
 ```
+
+Ordem real no NestJS (resumo): middleware, **guards** (por exemplo `SecurityInputGuard`, `ThrottlerGuard`), interceptors de pré-execução, **pipes** (`ValidationPipe` global e pipe de `shortCode`), e então o método do controller. O fluxograma acima é uma visão lógica simplificada, não a sequência exata.
 
 ## Modelo de Dados (ER)
 Estrutura simples e objetiva em uma única tabela para suprir a necessidade de rastreio de URLs curtas e cliques totais.
@@ -185,7 +187,7 @@ O projeto adotou as seguintes práticas visando controle de concorrência massiv
 ### Segurança
 - **Proteção do Endpoint e Headers:** A biblioteca `Helmet` embutida garante proteções contra Clickjacking (X-Frame-Options), restrições MIME e Sniffing de conteúdo, enquanto mantemos o `x-powered-by` oculto para ofuscar o Stack técnico utilizado. As regras de CORS são rigorosas para bloquear requests não autorizados num front-end externo.
 - **Segurança Intransigente de Entrada:** Um Guard global inspeciona `body`, `params`, `query` e headers customizados e rejeita com `HTTP 400` qualquer payload suspeito. Cobertura: XSS (incluindo bypass por encoding URL e entidades HTML), data: URI perigosos (`text/html`, `text/javascript`, `image/svg+xml`), SQLi como defesa em profundidade. Headers padrao (Authorization, Content-Type, etc.) sao ignorados para reduzir falsos positivos.
-- **Gatekeeper Rigoroso (Zod):** Schemas Zod validam o contrato de entrada por endpoint (tipo, formato e regras de domínio) antes da execução dos Use Cases.
+- **Validação de contrato (DTOs):** O ValidationPipe global aplica class-validator nos bodies tipados; o parâmetro `shortCode` usa pipe dedicado com as mesmas regras de domínio antes dos Use Cases. O SecurityInputGuard permanece apenas como política transversal de rejeição de padrões perigosos (ordem: guard antes dos pipes).
 - **Query Builds Seguras e Tratamento Drizzle:** Proteção contra SQL injections nativamente implementadas no uso restrito dos Query Builders. Não utilizamos concatenações abertas para evitar execução indevida. O Drizzle mapeia apenas tabelas autorizadas na memória e oculta relatórios de erro do DB.
 
 ## Observabilidade (compliance e rastreabilidade)
@@ -371,7 +373,7 @@ Testes de integração (repositório contra banco real) e e2e (API completa via 
 ## Convenções do projeto
 
 - Organização por feature/domínio
-- Validação com Zod (schemas nos contracts)
+- Validação com class-validator nos contracts (DTOs); `exceptionFactory` alinha erros ao código `VALIDATION_ERROR`
 - Regras de negócio nos use cases, não no controller
 - Acesso a banco via repositório (interface no domain)
 - TypeScript strict mode
