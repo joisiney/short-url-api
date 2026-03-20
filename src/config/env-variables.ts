@@ -122,12 +122,7 @@ export class EnvVariables {
   })
   APP_BODY_LIMIT!: string;
 
-  @Transform(({ value }: { value: unknown }): number => {
-    if (value === undefined || value === '') {
-      return 5000;
-    }
-    return Number(value);
-  })
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(86_400_000, {
@@ -275,12 +270,7 @@ export class EnvVariables {
   })
   REDIS_CONNECT_TIMEOUT_MS!: number;
 
-  @Transform(({ value }: { value: unknown }): number => {
-    if (value === undefined || value === '') {
-      return 60;
-    }
-    return Number(value);
-  })
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(86_400)
