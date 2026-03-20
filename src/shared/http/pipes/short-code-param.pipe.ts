@@ -4,6 +4,10 @@ import {
   BadRequestException,
   ArgumentMetadata,
 } from '@nestjs/common';
+import {
+  SHORT_CODE_MIN_LENGTH,
+  SHORT_CODE_MAX_LENGTH,
+} from '../../../modules/short-url/domain/constants/short-code.constants';
 
 @Injectable()
 export class ShortCodeParamPipe implements PipeTransform<unknown, string> {
@@ -21,7 +25,7 @@ export class ShortCodeParamPipe implements PipeTransform<unknown, string> {
       });
     }
 
-    if (value.length < 4) {
+    if (value.length < SHORT_CODE_MIN_LENGTH) {
       throw new BadRequestException({
         code: 'VALIDATION_ERROR',
         message: 'Request validation failed',
@@ -34,7 +38,7 @@ export class ShortCodeParamPipe implements PipeTransform<unknown, string> {
       });
     }
 
-    if (value.length > 8) {
+    if (value.length > SHORT_CODE_MAX_LENGTH) {
       throw new BadRequestException({
         code: 'VALIDATION_ERROR',
         message: 'Request validation failed',

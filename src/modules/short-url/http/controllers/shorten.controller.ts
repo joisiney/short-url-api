@@ -39,15 +39,19 @@ import { ShortUrlPresenter } from '../presenters/short-url.presenter';
 
 import { ShortUrlNotFoundError } from '../../domain/errors/short-url-not-found.error';
 import { UrlAlreadyShortenedError } from '../../domain/errors/url-already-shortened.error';
+import {
+  SHORT_CODE_MIN_LENGTH,
+  SHORT_CODE_MAX_LENGTH,
+} from '../../domain/constants/short-code.constants';
 
 const SHORT_CODE_PARAM = {
   name: 'shortCode',
-  description: 'Identificador curto da URL (4 a 8 caracteres Base 62)',
+  description: `Identificador curto da URL (${SHORT_CODE_MIN_LENGTH} a ${SHORT_CODE_MAX_LENGTH} caracteres Base 62)`,
   example: 'WK2s',
   schema: {
     type: 'string',
-    minLength: 4,
-    maxLength: 8,
+    minLength: SHORT_CODE_MIN_LENGTH,
+    maxLength: SHORT_CODE_MAX_LENGTH,
     pattern: '^[a-zA-Z0-9]+$',
   },
 } as const;

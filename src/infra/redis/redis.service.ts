@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import type { RedisConfig } from '../../config/redis.config';
 
+const REDIS_RETRY_MAX_ATTEMPTS = 3;
+const REDIS_RETRY_BASE_MS = 100;
+const REDIS_RETRY_MAX_DELAY_MS = 3000;
+
 /**
  * Redis usado para cache (CachedShortUrlRepository) e seguranca (Throttler rate limit distribuido).
  */
@@ -23,9 +27,11 @@ export class RedisService implements OnModuleDestroy {
       db: config.db,
       connectTimeout: config.connectTimeoutMs,
       enableReadyCheck: true,
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: REDIS_RETRY_MAX_ATTEMPTS,
       retryStrategy: (times) =>
-        times > 3 ? null : Math.min(times * 100, 3000),
+        times > REDIS_RETRY_MAX_ATTEMPTS
+          ? null
+          : Math.min(times * REDIS_RETRY_BASE_MS, REDIS_RETRY_MAX_DELAY_MS),
       ...(config.tlsEnabled && { tls: {} }),
     });
   }
