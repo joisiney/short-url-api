@@ -31,6 +31,7 @@
     "docker:api:refresh": "docker compose up -d --build --force-recreate api",
     "clear": "node -e \"const { rmSync } = require('node:fs'); ['node_modules', 'dist', 'coverage', 'coverage-e2e', 'coverage-integration'].forEach((path) => rmSync(path, { recursive: true, force: true }));\"",
     "reset": "npm run clear && node -e \"const { rmSync } = require('node:fs'); rmSync('package-lock.json', { force: true });\"",
+    "reset:all": "docker compose -f docker-compose.yml down --remove-orphans && npm run reset",
     "prepare": "husky"
   },
   "dependencies": {
