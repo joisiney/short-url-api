@@ -186,7 +186,7 @@ Uma única tabela resolve bem o domínio principal aqui: URL original, código c
 ### Aplicadas no código
 
 * URL válida em `POST` e `PUT`, validada em DTOs
-* `shortCode` único, gerado a partir de ID sequencial (`Redis INCR`) + Base62
+* `shortCode` único, gerado a partir de ID sequencial (`Redis INCR`), permutação Feistel de 32 bits com segredo (`SHORT_CODE_FEISTEL_SECRET`) e Base62
 * Constraint `UNIQUE` no banco para reforço de integridade
 * `shortCode` com 4 a 8 caracteres alfanuméricos
 * Idempotência em `POST`: a mesma URL retorna o mesmo `shortCode` já existente
