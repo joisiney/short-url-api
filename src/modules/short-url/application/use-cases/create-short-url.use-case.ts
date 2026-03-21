@@ -4,6 +4,7 @@ import type { ShortUrlRepository } from '@modules/short-url/domain/repositories/
 import { SHORT_URL_REPOSITORY } from '@modules/short-url/domain/repositories/short-url.repository';
 import { IdGeneratorService } from '@modules/short-url/application/services/id-generator.service';
 import { Base62EncoderService } from '@modules/short-url/application/services/base62-encoder.service';
+import { ShortCodePermutationService } from '@modules/short-url/application/services/short-code-permutation.service';
 import { ShortUrl } from '@modules/short-url/domain/entities/short-url.entity';
 
 export type CreateShortUrlInput = {
@@ -24,6 +25,7 @@ export class CreateShortUrlUseCase {
     @Inject(SHORT_URL_REPOSITORY)
     private readonly shortUrlRepository: ShortUrlRepository,
     private readonly idGenerator: IdGeneratorService,
+    private readonly shortCodePermutation: ShortCodePermutationService,
     private readonly base62Encoder: Base62EncoderService,
   ) {}
 
@@ -42,7 +44,8 @@ export class CreateShortUrlUseCase {
     }
 
     const id = await this.idGenerator.getNextId();
-    const shortCode = this.base62Encoder.encode(id);
+    const permuted = this.shortCodePermutation.permute(id);
+    const shortCode = this.base62Encoder.encode(permuted);
     const now = new Date();
 
     const shortUrl = new ShortUrl({
