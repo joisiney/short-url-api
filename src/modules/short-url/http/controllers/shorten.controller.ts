@@ -57,6 +57,13 @@ const SHORT_CODE_PARAM = {
   },
 } as const;
 
+const THROTTLE_CONFIG = {
+  default: {
+    limit: 12,
+    ttl: 60_000,
+  },
+};
+
 @ApiTags('short-url')
 @ApiExtraModels(ApiErrorResponse)
 @Controller()
@@ -70,7 +77,7 @@ export class ShortenController {
   ) {}
 
   @Post('shorten')
-  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @Throttle(THROTTLE_CONFIG)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Criar URL curta' })
   @ApiBody({ type: CreateShortUrlRequest })
@@ -95,7 +102,7 @@ export class ShortenController {
   }
 
   @Get('shorten/:shortCode')
-  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @Throttle(THROTTLE_CONFIG)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obter URL original pelo short code' })
   @ApiParam(SHORT_CODE_PARAM)
@@ -138,6 +145,7 @@ export class ShortenController {
   }
 
   @Put('shorten/:shortCode')
+  @Throttle(THROTTLE_CONFIG)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Atualizar URL original de um short code' })
   @ApiParam(SHORT_CODE_PARAM)
@@ -196,6 +204,7 @@ export class ShortenController {
   }
 
   @Delete('shorten/:shortCode')
+  @Throttle(THROTTLE_CONFIG)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Deletar um short code' })
   @ApiParam(SHORT_CODE_PARAM)
@@ -235,6 +244,7 @@ export class ShortenController {
   }
 
   @Get('shorten/:shortCode/stats')
+  @Throttle(THROTTLE_CONFIG)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obter estatísticas de acesso de um short code' })
   @ApiParam(SHORT_CODE_PARAM)
