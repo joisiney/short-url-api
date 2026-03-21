@@ -18,6 +18,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Estatísticas do diff (git)
+        id: diff-stats
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          STATS=$(git diff --numstat "$BASE...$HEAD" | awk '
+            $1 != "-" && $1 != "" { ins += $1 }
+            $2 != "-" && $2 != "" { del += $2 }
+            END { printf "%d %d", ins+0, del+0 }
+          ')
+          COMMITS=$(git rev-list --count "$BASE..$HEAD" 2>/dev/null || echo 0)
+          FILES=$(git diff --name-only "$BASE...$HEAD" | wc -l | tr -d " ")
+          echo "insertions=${STATS%% *}" >> "$GITHUB_OUTPUT"
+          echo "deletions=${STATS#* }" >> "$GITHUB_OUTPUT"
+          echo "commits=$COMMITS" >> "$GITHUB_OUTPUT"
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
       - name: Obter lista de arquivos alterados
         id: changed-files
         run: |
@@ -40,6 +57,10 @@ jobs:
         env:
           PR_CHANGED_FILES_MD: ${{ steps.changed-files.outputs.list }}
           PR_COMMITS_MD: ${{ steps.commits.outputs.list }}
+          PR_GIT_INSERTIONS: ${{ steps.diff-stats.outputs.insertions }}
+          PR_GIT_DELETIONS: ${{ steps.diff-stats.outputs.deletions }}
+          PR_GIT_COMMITS: ${{ steps.diff-stats.outputs.commits }}
+          PR_GIT_FILES: ${{ steps.diff-stats.outputs.files }}
         with:
           script: |
             const markerStart = '<!-- pr-auto-summary:start -->';
@@ -50,12 +71,27 @@ jobs:
             const commitsList = process.env.PR_COMMITS_MD ?? '';
 
             const fmt = (v, fallback) =>
-              v !== null && v !== undefined ? String(v) : fallback;
+              v !== null && v !== undefined && v !== '' ? String(v) : fallback;
 
-            const commitsCount = fmt(pr.commits, 'a calcular');
-            const changedFilesCount = fmt(pr.changed_files, 'a calcular');
-            const additions = pr.additions != null ? `+${pr.additions}` : 'a calcular';
-            const deletions = pr.deletions != null ? `-${pr.deletions}` : 'a calcular';
+            const gitIns = process.env.PR_GIT_INSERTIONS;
+            const gitDel = process.env.PR_GIT_DELETIONS;
+            const gitCommits = process.env.PR_GIT_COMMITS;
+            const gitFiles = process.env.PR_GIT_FILES;
+
+            const commitsCount = fmt(gitCommits, fmt(pr.commits, 'a calcular'));
+            const changedFilesCount = fmt(gitFiles, fmt(pr.changed_files, 'a calcular'));
+            const additions =
+              gitIns !== undefined && gitIns !== ''
+                ? `+${gitIns}`
+                : pr.additions != null
+                  ? `+${pr.additions}`
+                  : 'a calcular';
+            const deletions =
+              gitDel !== undefined && gitDel !== ''
+                ? `-${gitDel}`
+                : pr.deletions != null
+                  ? `-${pr.deletions}`
+                  : 'a calcular';
             const isDraft = pr.draft ? 'Sim' : 'Não';
 
             const summaryLines = [
