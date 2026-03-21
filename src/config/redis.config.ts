@@ -16,7 +16,7 @@ export default registerAs('redis', (): RedisConfig => {
   return {
     host: parsedEnv.REDIS_HOST,
     port: parsedEnv.REDIS_PORT,
-    password: parsedEnv.REDIS_PASSWORD,
+    password: parsedEnv.REDIS_PWD,
     db: parsedEnv.REDIS_DB,
     tlsEnabled: parsedEnv.REDIS_TLS_ENABLED,
     connectTimeoutMs: parsedEnv.REDIS_CONNECT_TIMEOUT_MS,

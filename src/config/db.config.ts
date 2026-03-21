@@ -17,15 +17,15 @@ export type DbConfig = {
 export default registerAs('db', (): DbConfig => {
   const parsedEnv = parseEnv(process.env);
   return {
-    host: parsedEnv.DB_HOST,
-    port: parsedEnv.DB_PORT,
-    name: parsedEnv.DB_NAME,
-    user: parsedEnv.DB_USER,
-    password: parsedEnv.DB_PASSWORD,
-    ssl: parsedEnv.DB_SSL,
-    poolMin: parsedEnv.DB_POOL_MIN,
-    poolMax: parsedEnv.DB_POOL_MAX,
-    idleTimeoutMs: parsedEnv.DB_IDLE_TIMEOUT_MS,
-    connectionTimeoutMs: parsedEnv.DB_CONNECTION_TIMEOUT_MS,
+    host: parsedEnv.PG_HOST,
+    port: parsedEnv.PG_PORT,
+    name: parsedEnv.PG_NAME,
+    user: parsedEnv.PG_USER,
+    password: parsedEnv.PG_PWD,
+    ssl: parsedEnv.PG_SSL,
+    poolMin: parsedEnv.PG_POOL_MIN,
+    poolMax: parsedEnv.PG_POOL_MAX,
+    idleTimeoutMs: parsedEnv.PG_IDLE_TIMEOUT_MS,
+    connectionTimeoutMs: parsedEnv.PG_CONNECTION_TIMEOUT_MS,
   };
 });
