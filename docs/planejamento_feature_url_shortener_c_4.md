@@ -16,6 +16,7 @@ Este documento cobre:
 - diagrama **Mermaid UML/ER do banco**
 - regras de segurança de banco de dados
 - estratégias de cache, rate limit, logging, testes e Docker
+- **geração de `shortCode`**: contador Redis (`INCR`) + permutação Feistel com segredo em `.env` (validado com as demais envs) + Base62; detalhes nas seções **15**, **15.2** e **15.3**
 - plano incremental de implementação
 - estrutura sugerida do projeto
 
@@ -61,7 +62,7 @@ Não faz parte do escopo:
 - estrutura por feature/domínio, não por tipo de arquivo global
 - separação clara entre controller, use case, service e repository
 - repositório como única porta de acesso persistente
-- validação de entrada HTTP com DTOs (ValidationPipe + class-validator); parâmetro `shortCode` com pipe dedicado; env validada com classe `EnvVariables` e `parseEnv`
+- validação de entrada HTTP com DTOs (ValidationPipe + class-validator); parâmetro `shortCode` com pipe dedicado; env validada com classe `EnvVariables` e `parseEnv` (**incluindo o segredo da permutação do `shortCode`**, declarado no `.env` e documentado no `.env.example`, sem valor sensível versionado)
 - domínio desacoplado de detalhes de framework e ORM
 - observabilidade desde o primeiro commit
 - segurança e padronização como requisitos transversais
@@ -99,13 +100,15 @@ Saída esperada `201`:
 }
 ```
 
+Nota sobre o exemplo: `shortCode` e `id` ilustram o contrato HTTP. Na implementação, `id` corresponde ao valor do contador Redis em forma de string e `shortCode` deriva de **permutação keyed + Base62** (não de Base62 direto do contador). Valores como `"abc123"` são apenas placeholders de documentação.
+
 Regras:
 
 - validar URL nos DTOs (`@IsUrl` em POST/PUT)
 - normalizar string de entrada
 - idempotente: se a URL ja existir, retornar shortCode existente (201)
-- gerar `shortCode` aleatorio e unico quando URL nao existir
-- shortCode entre 4 e 8 caracteres, URL-friendly
+- gerar `shortCode` unico quando URL nao existir: contador monotonico no Redis (`INCR`), permutacao tipo Feistel com segredo em env, codificacao Base62 (sem consulta previa de existencia no banco para o slug)
+- `shortCode` entre 4 e 8 caracteres, URL-friendly (com permutacao em espaco de 32 bits o comprimento tende a ate 6 caracteres em Base62; limites do pipe e do banco permanecem validos)
 - garantir unicidade no banco com constraint
 - retornar erro padronizado em caso de payload invalido
 
@@ -244,7 +247,7 @@ Regras:
 
 - rate limit com `@nestjs/throttler`
 - Redis para throttle distribuído
-- limites diferentes por rota quando fizer sentido
+- implementacao atual: **12 req/min por IP** nas rotas do `ShortenController` (mesmo objeto `THROTTLE_CONFIG`); evoluir para limites distintos por rota se necessario
 - timeout de request e integrações
 - monitorar padrões abusivos por IP e rota
 
@@ -325,20 +328,14 @@ src/
   modules/
     short-url/
       short-url.module.ts
-      presentation/
-        controllers/
-          create-short-url.controller.ts
-          get-short-url.controller.ts
-          update-short-url.controller.ts
-          delete-short-url.controller.ts
-          get-short-url-stats.controller.ts
-        presenters/
-          short-url.presenter.ts
-          short-url-stats.presenter.ts
-        schemas/
-          create-short-url.request.schema.ts
-          update-short-url.request.schema.ts
-          short-code.param.schema.ts
+      domain/
+        entities/short-url.entity.ts
+        repositories/short-url.repository.ts
+        constants/short-code.constants.ts
+        errors/
+          short-url-not-found.error.ts
+          url-already-shortened.error.ts
+          invalid-short-url-state.error.ts
       application/
         use-cases/
           create-short-url.use-case.ts
@@ -347,26 +344,26 @@ src/
           delete-short-url.use-case.ts
           get-short-url-stats.use-case.ts
         services/
-          short-code-generator.service.ts
-          short-url-validator.service.ts
-      domain/
-        entities/
-          short-url.entity.ts
-        repositories/
-          short-url.repository.ts
-        errors/
-          short-url-not-found.error.ts
-          short-code-collision.error.ts
-          invalid-url-domain.error.ts
-      infrastructure/
+          id-generator.service.ts
+          base62-encoder.service.ts
+          short-code-permutation.service.ts
+      http/
+        controllers/shorten.controller.ts
+        contracts/
+        presenters/short-url.presenter.ts
+      infra/
         repositories/
           drizzle-short-url.repository.ts
-        mappers/
-          short-url.persistence.mapper.ts
-        drizzle/
-          short-url.table.ts
-          short-url-access.table.ts
+          cached-short-url.repository.ts
+        mappers/short-url.persistence-mapper.ts
+
+  infra/
+    database/
+      schema/
+        short-urls.table.ts
 ```
+
+Estrutura alinhada ao repositório e ao modelo de geração do `shortCode` descrito neste documento; detalhamento adicional na seção 20.
 
 ### Motivo
 
@@ -398,7 +395,7 @@ Responsável por:
 
 Responsável por:
 
-- capacidades reutilizáveis ligadas à feature, como geração de shortCode
+- capacidades reutilizáveis ligadas à feature, como geração de `shortCode`: contador Redis (`IdGeneratorService`), permutação com segredo (`ShortCodePermutationService`), codificação Base62 (`Base62EncoderService`)
 - regras técnicas auxiliares que não pertencem ao controller nem ao repositório
 
 ### Repository
@@ -584,7 +581,7 @@ flowchart LR
     Throttler[ThrottlerGuard]
     DtoValidation[ValidationPipe + DTOs / ShortCodeParamPipe]
     UseCases[Use Cases]
-    Generator[ShortCodeGeneratorService]
+    ShortCodeDerivation["Derivacao shortCode Redis INCR + Feistel + Base62"]
     RepoPort[ShortUrlRepository Port]
     CachedRepo[CachedShortUrlRepository]
     DrizzleRepo[DrizzleShortUrlRepository]
@@ -598,7 +595,7 @@ flowchart LR
     Throttler --> Controller
     Controller --> DtoValidation
     DtoValidation --> UseCases
-    UseCases --> Generator
+    UseCases --> ShortCodeDerivation
     UseCases --> RepoPort
     RepoPort --> CachedRepo
     CachedRepo --> Redis
@@ -724,7 +721,7 @@ O índice isolado de `short_code` pode ser redundante se a constraint unique já
 ## 11.4 Regras de integridade e concorrência
 
 - unicidade garantida no banco e não apenas na aplicação
-- colisão de `shortCode` deve ser tratada com retry controlado no use case
+- com permutação bijetiva, colisão de `shortCode` entre ids distintos é improvável; manter `UNIQUE` no banco como defesa em profundidade; retry por violação de unicidade apenas como rede de segurança (ex.: bug ou mudança de algoritmo)
 - incremento de `access_count` deve ser atômico
 - transações apenas quando realmente necessárias
 - transações curtas
@@ -814,7 +811,7 @@ Validação imperativa no `ShortCodeParamPipe`, lançando `BadRequestException` 
 
 ```text
 Request -> Controller -> ValidationPipe / ShortCodeParamPipe -> CreateShortUrlUseCase
--> gerar shortCode -> tentar persistir -> colisão? retry curto
+-> INCR Redis -> Feistel com segredo -> Base62 -> persistir (colisao de slug improvavel; UNIQUE no DB)
 -> presenter -> response 201
 ```
 
@@ -857,33 +854,74 @@ Request -> Controller -> validar shortCode -> GetShortUrlStatsUseCase
 
 ## Requisitos
 
-- aleatório
-- único
-- curto
-- seguro o suficiente para o escopo
+- **Unicidade** sem depender de `SELECT` de existência antes do insert (escalabilidade do contador).
+- **Não enumerabilidade** em relação ao vizinho do contador: o código público não deve revelar `id+1` / `id-1` como no Base62 direto do inteiro.
+- **Curto** dentro do permitido pelo produto (pipe e banco: 4 a 8 caracteres na borda HTTP; permutação em 32 bits produz tipicamente até ~6 caracteres em Base62).
+- **Segredo operacional**: chave de permutação apenas no servidor (env), nunca no cliente.
 
 ## Decisão
 
-Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset controlado e tamanho inicial entre 6 e 8 caracteres.
+1. **Contador** no Redis (`INCR`), como hoje (`IdGeneratorService`), como fonte monotônica de ids numéricos.
+2. **Permutação keyed** (rede Feistel ou equivalente criptograficamente razoável) sobre um bloco fixo (ex.: 32 bits), usando segredo derivado de variável de ambiente.
+3. **Base62** sobre o resultado da permutação (reutilizar `Base62EncoderService` como formatador do inteiro permutado).
+
+Fluxo no create: `id = await getNextId()` -> `permuted = feistel32(id, secret)` -> `shortCode = base62Encode(permuted)` -> `INSERT` com `UNIQUE(short_code)`.
 
 ## Regras
 
-- charset: `A-Z`, `a-z`, `0-9`
-- validar via regex
-- persistência protegida por unique constraint
-- em caso de colisão, retry limitado
-- após número pequeno de tentativas, retornar erro técnico controlado
+- Charset do `shortCode` na URL: mesmo alfabeto Base62 já validado pelo `ShortCodeParamPipe` (`A-Z`, `a-z`, `0-9`).
+- **Bijeção** no espaço permutado: dois ids distintos não devem gerar o mesmo `shortCode` (eliminando colisão lógica por construção, diferente de slug aleatório com retry).
+- Manter `UNIQUE` e constraint de tamanho no PostgreSQL como defesa em profundidade.
+- **Rotação de segredo**: trocar a chave altera apenas **novos** links; códigos já emitidos permanecem válidos no banco (não há decodificação reversa na leitura: resolve sempre por `short_code`).
 
 ## Motivo
 
-- não confiar apenas em checagem prévia em memória
-- o banco é a garantia final de unicidade
+- Preserva o modelo **uma escrita por criação** e o gargalo previsível (índice único em `short_code`), sem busca prévia por colisão de slug aleatório.
+- Endurece o cenário de enumeração por vizinhança que existia com `Base62(id)` puro, alinhado ao rate limit por IP já adotado.
+
+## 15.1 Impacto na implementação (arquivos e camadas)
+
+Alterações esperadas quando esta decisão for codificada:
+
+| Área | Arquivo / artefato | Natureza do impacto |
+|------|--------------------|---------------------|
+| Use case | `src/modules/short-url/application/use-cases/create-short-url.use-case.ts` | Trocar `base62Encoder.encode(id)` por `base62Encoder.encode(permutedId)` após serviço de permutação; injetar novo serviço. |
+| Novo serviço de aplicação | `src/modules/short-url/application/services/` (ex.: `short-code-permutation.service.ts` ou nome alinhado ao time) | Implementar Feistel (ou FPE) 32 bits, leitura de segredo via construtor/config. Testes unitários com vetores fixos (chave conhecida). |
+| Serviço existente | `src/modules/short-url/application/services/id-generator.service.ts` | Sem mudança de contrato público (`getNextId`), salvo documentação. |
+| Serviço existente | `src/modules/short-url/application/services/base62-encoder.service.ts` | Sem mudança de regra; entrada passa a ser o uint32 (ou bigint futuro) pós-permutação. |
+| Módulo Nest | `src/modules/short-url/short-url.module.ts` | Registrar provider da permutação; possível binding da chave a partir de `ConfigService` / env. |
+| Configuração | `src/config/env-variables.ts`, `src/config/env.parser.ts`, `env-cross-rules.ts` (se preciso) | Nova variável **somente** via `.env` local; declarada em `EnvVariables` e validada no **`parseEnv` junto com as demais envs** na subida (falha antecipada se ausente/inválida onde obrigatória). |
+| Exemplo de ambiente | `.env.example` (raiz) | Incluir a nova chave com **placeholder sem segredo real**, no mesmo padrão das outras variáveis documentadas. |
+| Constantes de domínio | `src/modules/short-url/domain/constants/short-code.constants.ts` | Revisar se `SHORT_CODE_MAX_LENGTH` 8 continua suficiente para o pior caso Base62 do bloco (32 bits cabe em 6 caracteres; margem OK). |
+| HTTP | `src/modules/short-url/http/controllers/shorten.controller.ts` | Apenas Swagger/exemplo de `shortCode` se quiser refletir formato típico pós-Feistel (opcional). |
+| Pipe | `src/shared/http/pipes/short-code-param.pipe.ts` | Sem mudança obrigatória se comprimentos permanecerem 4 a 8. |
+| Repositório / cache / Drizzle | `src/modules/short-url/infra/repositories/drizzle-short-url.repository.ts`, `cached-short-url.repository.ts`, schema Drizzle | Sem mudança: lookup continua por `short_code` string. |
+| Demais use cases | get / update / delete / stats | Sem mudança: recebem `shortCode` já persistido. |
+| Testes (unitário / integração / E2E) | `*.spec.ts`, `test/*.integration-spec.ts`, `test/app.e2e-spec.ts`, configs Jest em `test/` | **Obrigatório** manter a suíte verde e alinhada ao novo padrão: ver seção 15.2. |
+| Documentação de produto | `README.md` (seção modelo de dados) | Alinhar texto que hoje cita apenas `INCR` + Base62 direto; documentar a nova env no setup local se necessário. |
+
+## 15.2 Segredo: `.env`, validação conjunta e `.env.example`
+
+- O segredo da permutação **não** é hardcoded; fica no **`.env`** (arquivo ignorado pelo Git), como as demais credenciais.
+- **`EnvVariables`** + **`parseEnv`**: a nova variável passa pelas mesmas etapas de validação que o restante do ambiente (class-validator e, se aplicável, `collectEnvCrossRuleViolations`).
+- **`.env.example`**: atualizar na mesma entrega da feature com o nome da variável e um valor de exemplo **não sensível**, para onboarding e CI que montam env a partir do exemplo.
+
+## 15.3 Testes: critério de entrega com o novo padrão
+
+Na implementação da permutação Feistel + Base62, a entrega só está completa se:
+
+- **Unitários** (`npm test`): serviço de permutação (vetores conhecidos com chave fixa), `CreateShortUrlUseCase` e demais specs afetados atualizados (sem depender de `shortCode` derivado de Base62 puro do contador, salvo mocks explícitos).
+- **Integração** (`npm run test:integration`): processo Jest carrega a nova env de teste (ou default seguro exclusivo de teste) para que criação de `short_url`, repositório Drizzle e cenários de concorrência continuem válidos.
+- **E2E** (`npm run test:e2e`): fluxo HTTP completo (create, get, etc.) permanece passando; `shortCode` retornado deve continuar obedecendo ao `ShortCodeParamPipe`.
+- Opcionalmente validar tudo de uma vez com `npm run test:all`.
+
+**Fora de escopo imediato desta decisão**: autenticação em operações de escrita (já listada como evolução natural no README); mudança de rate limit além do já implementado (12 req/min por IP nas rotas do `ShortenController`).
 
 ---
 
 # 16. Redis: onde usar e onde não usar
 
-**Implementado conforme ADR-00-14.**
+**Uso do Redis nesta feature** (resumo abaixo; detalhes na seção).
 
 ## Usar Redis para
 
@@ -899,7 +937,7 @@ Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset
 
 ## Implementação atual
 
-- **Throttler**: storage Redis, limites por rota (POST /shorten: 20/min, GET /shorten/:shortCode: 100/min)
+- **Throttler**: storage Redis, **12 requisições por minuto por IP** nas rotas expostas em `ShortenController` (POST `/shorten`, GET/PUT/DELETE `/shorten/:shortCode`, GET stats), conforme `THROTTLE_CONFIG` no código
 - **Cache**: `findByShortCode` com TTL configurável (`CACHE_TTL_SECONDS`), invalidação em PUT e DELETE
 - **Health**: `/health/ready` retorna `degraded` se Redis down
 - se Redis cair, cache retorna miss e vai ao DB; throttler pode degradar
@@ -929,8 +967,8 @@ Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset
 
 ## Abuso
 
-- throttle mais rígido para `POST /shorten`
-- throttle moderado para `GET /shorten/:shortCode`
+- throttle unificado **12 req/min por IP** no controller de shorten (POST, GET, PUT, DELETE, stats), conforme codigo
+- monitorar se POST deveria ser mais restritivo que GET em versao futura
 - monitorar IPs e user-agents abusivos
 - considerar bloqueio progressivo se houver scraping óbvio
 
@@ -938,9 +976,11 @@ Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset
 
 # 18. Estratégia de testes
 
+Com a evolução do `shortCode` (contador + permutação com segredo + Base62; ver seção 15), esta estratégia exige que **unitários, integração e E2E** sejam **mantidos e atualizados** na mesma entrega: variável de segredo em `.env` / env de teste, validação no `parseEnv`, e suites verdes (`npm test`, `npm run test:integration`, `npm run test:e2e` ou `npm run test:all`).
+
 ## Unitários
 
-- geração de shortCode
+- permutação Feistel (vetores conhecidos) e integração com Base62 no fluxo de criação
 - regras de create/update/delete/get/stats
 - result pattern e erros de domínio
 
@@ -948,7 +988,7 @@ Usar gerador pseudoaleatório seguro baseado em `crypto` do Node.js, com charset
 
 - repositório Drizzle + Postgres
 - incremento atômico de `access_count`
-- tratamento de colisão de `shortCode`
+- violação rara de `UNIQUE` em `shortCode` (rede de segurança, não caminho feliz)
 - health checks mínimos
 
 ## Validação
@@ -1058,9 +1098,12 @@ src/
           short-url.entity.ts
         repositories/
           short-url.repository.ts
+        constants/
+          short-code.constants.ts
         errors/
           short-url-not-found.error.ts
-          short-code-generation-failed.error.ts
+          url-already-shortened.error.ts
+          invalid-short-url-state.error.ts
       application/
         use-cases/
           create-short-url.use-case.ts
@@ -1069,33 +1112,39 @@ src/
           delete-short-url.use-case.ts
           get-short-url-stats.use-case.ts
         services/
-          short-code-generator.service.ts
-      presentation/
+          id-generator.service.ts
+          base62-encoder.service.ts
+          short-code-permutation.service.ts
+      http/
         controllers/
-          create-short-url.controller.ts
-          get-short-url.controller.ts
-          update-short-url.controller.ts
-          delete-short-url.controller.ts
-          get-short-url-stats.controller.ts
+          shorten.controller.ts
+        contracts/
+          create-short-url.request.ts
+          update-short-url.request.ts
+          short-url.response.ts
+          short-url-stats.response.ts
         presenters/
           short-url.presenter.ts
-          short-url-stats.presenter.ts
-        schemas/
-          create-short-url.request.schema.ts
-          update-short-url.request.schema.ts
-          short-code.param.schema.ts
-      infrastructure/
-        drizzle/
-          short-url.table.ts
+      infra/
         repositories/
           drizzle-short-url.repository.ts
+          cached-short-url.repository.ts
         mappers/
-          short-url.persistence.mapper.ts
+          short-url.persistence-mapper.ts
+
+  infra/
+    database/
+      schema/
+        short-urls.table.ts
 
 test/
-  integration/
-  e2e/
+  app.e2e-spec.ts
+  jest-e2e.json
+  jest-integration.json
+  *.integration-spec.ts
 ```
+
+Observação: `short-code-permutation.service.ts` materializa a permutação Feistel descrita na seção 15 e pode ainda não existir no repositório até a implementação ser concluída.
 
 ---
 
@@ -1112,13 +1161,13 @@ test/
 - exemplos:
   - `create-short-url.use-case.ts`
   - `short-url.presenter.ts`
-  - `short-code.param.schema.ts`
+  - `short-code-param.pipe.ts` (shared)
 
 ## Classes
 
 - `CreateShortUrlUseCase`
 - `DrizzleShortUrlRepository`
-- `GetShortUrlController`
+- `ShortenController`
 
 ## Providers/tokens
 
@@ -1138,8 +1187,9 @@ test/
 ## Exemplos de erro esperado
 
 - `ShortUrlNotFoundError`
-- `ShortCodeGenerationFailedError`
-- `ValidationFailedError`
+- `UrlAlreadyShortenedError`
+- `InvalidShortUrlStateError` (conforme domínio)
+- erros de validação na borda (`VALIDATION_ERROR` / factory do ValidationPipe)
 
 ## Mapeamento sugerido
 
@@ -1197,16 +1247,17 @@ test/
 - entidade
 - contrato de repositório
 - erros de domínio
-- generator service
+- serviços de apoio à geração de código: `IdGeneratorService` (Redis `INCR`), `Base62EncoderService`; **evolução**: `ShortCodePermutationService` (Feistel + segredo via env), conforme seção 15
 
 ## Commit 05 — create short URL
 
-- schema
-- controller
-- use case
-- repository drizzle
+- schema / migration
+- controller (`ShortenController`) e contratos HTTP
+- use case (fluxo: INCR → permutação → Base62 → persistência)
+- repository Drizzle (+ cache se aplicável)
+- variável de ambiente do segredo em `EnvVariables`, `.env.example` e validação no `parseEnv`
 - swagger
-- testes unitários e integração
+- testes unitários, integração e (quando existir) E2E atualizados para o novo padrão de `shortCode`
 
 ## Commit 06 — get short URL + incremento de acesso
 
@@ -1228,7 +1279,7 @@ test/
 ## Commit 09 — observabilidade e hardening
 
 - health checks
-- throttler + redis
+- throttler + Redis (**12 req/min por IP** nas rotas do `ShortenController`, conforme implementação)
 - helmet/cors/timeout
 - logs estruturados
 
@@ -1251,8 +1302,8 @@ O projeto deve ter `README.md` na raiz com:
 - como rodar migrations
 - como rodar testes
 - como acessar Swagger
-- variáveis de ambiente necessárias
-- decisões arquiteturais resumidas
+- variáveis de ambiente necessárias (**incluindo segredo da permutação do `shortCode`**, sem expor valores reais)
+- decisões arquiteturais resumidas (incluindo modelo de geração de `shortCode` na seção 15 e uso do Redis na seção 16)
 - convenções de commit
 
 ---
@@ -1271,6 +1322,8 @@ O projeto deve ter `README.md` na raiz com:
 - **Result Pattern** para falhas esperadas
 - **Swagger** como documentação viva
 - **Docker Compose** com app + postgres + redis
+- **Geração de `shortCode`**: Redis `INCR` + permutação Feistel (segredo no `.env`, validado com `EnvVariables` / `parseEnv`) + Base62; ver seção 15
+- **Testes**: manter `npm test`, `npm run test:integration` e `npm run test:e2e` verdes ao introduzir a permutação (seção 15.3)
 
 ## Resultado arquitetural esperado
 
@@ -1291,9 +1344,9 @@ Uma feature simples no escopo, mas construída com base sólida de produção:
 A partir deste planejamento, o próximo artefato ideal é quebrar isso em:
 
 1. backlog técnico por épicos e tasks
-2. ADRs principais da feature
+2. registro formal de decisões técnicas complementares (opcional; se o time usar outro artefato, mantenha-o independente deste planejamento)
 3. estrutura inicial de pastas/arquivos do projeto
-4. README base
+4. README base (envs e geração de `shortCode` alinhados à implementação)
 5. primeiro conjunto de migrations e contratos
 
 ---
@@ -1306,7 +1359,7 @@ flowchart TD
     B --> C[ValidationPipe / pipes de parâmetro]
     C --> D[Use Case]
     D --> E{Operação}
-    E -->|Create| F[Gerar shortCode e persistir]
+    E -->|Create| F[INCR Redis Feistel segredo Base62 e persistir]
     E -->|Get| G[Buscar URL e incrementar access_count]
     E -->|Update| H[Atualizar URL]
     E -->|Delete| I[Remover registro]
