@@ -39,11 +39,14 @@ jobs:
 
       - name: Comentar no PR com resumo dinâmico
         uses: actions/github-script@v7
+        env:
+          PR_CHANGED_FILES_MD: ${{ steps.changed-files.outputs.list }}
+          PR_COMMITS_MD: ${{ steps.commits.outputs.list }}
         with:
           script: |
             const pr = context.payload.pull_request;
-            const changedFiles = `${{ steps.changed-files.outputs.list }}`;
-            const commits = `${{ steps.commits.outputs.list }}`;
+            const changedFiles = process.env.PR_CHANGED_FILES_MD ?? '';
+            const commits = process.env.PR_COMMITS_MD ?? '';
 
             const isDraft = pr.draft ? '🔴 Sim' : '🟢 Não';
             const isConflict = pr.mergeable === false ? '⚠️ Há conflitos!' : '✅ Sem conflitos';
