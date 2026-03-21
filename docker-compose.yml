@@ -14,7 +14,7 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: postgres
+      PG_HOST: postgres
       REDIS_HOST: redis
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health/live || exit 1"]
@@ -31,15 +31,15 @@ services:
     image: postgres:16-alpine
     container_name: short-url-postgres
     environment:
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-Pg!Strong123}
-      - POSTGRES_DB=${DB_NAME:-short_url}
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_PASSWORD=${PG_PWD}
+      - POSTGRES_DB=${PG_NAME}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-short_url}"]
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -47,11 +47,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: short-url-redis
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-Redis!Strong123}"]
+    command: ["redis-server", "--requirepass", "${REDIS_PWD}"]
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-Redis!Strong123}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PWD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -65,8 +65,8 @@ services:
     environment:
       PGHOST: postgres
       PGPORT: 5432
-      PGUSER: ${DB_USER:-postgres}
-      PGPASSWORD: ${DB_PASSWORD:-Pg!Strong123}
+      PGUSER: ${PG_USER}
+      PGPASSWORD: ${PG_PWD}
     command: >
       sh -c "psql -d postgres -c \"SELECT 1 FROM pg_database WHERE datname = 'short_url_test'\" | grep -q 1
       || psql -d postgres -c \"CREATE DATABASE short_url_test\""
