@@ -325,6 +325,23 @@ export class EnvVariables {
   @IsOptional()
   @IsIn(['otlp', 'none'])
   OTEL_TRACES_EXPORTER?: 'otlp' | 'none';
+
+  @Transform(({ value }: { value: unknown }): string =>
+    envScalarToString(value).trim(),
+  )
+  @IsString()
+  @MinLength(32, {
+    message:
+      'SHORT_CODE_FEISTEL_SECRET deve ter no minimo 32 caracteres (entropia suficiente)',
+  })
+  @MaxLength(256, {
+    message: 'SHORT_CODE_FEISTEL_SECRET nao pode exceder 256 caracteres',
+  })
+  @Matches(/^[-A-Za-z0-9+/=_]+$/, {
+    message:
+      'SHORT_CODE_FEISTEL_SECRET deve usar caracteres seguros (base64 ou similar)',
+  })
+  SHORT_CODE_FEISTEL_SECRET!: string;
 }
 
 export type Env = EnvVariables;
