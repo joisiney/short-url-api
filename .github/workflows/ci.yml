@@ -202,7 +202,7 @@ jobs:
       - run: npm run build
 
   release:
-    if: github.event.pull_request.merged == true && github.base_ref == 'refs/heads/main'
+    if: github.event.pull_request.merged == true && (github.base_ref == 'dev' || github.base_ref == 'refs/heads/dev')
     needs: [build]
     runs-on: ubuntu-latest
     permissions:
