@@ -3,7 +3,6 @@ import { RedisService } from './redis.service';
 
 /**
  * Modulo Redis: cache e seguranca (rate limit distribuido).
- * ADR-00-14.
  */
 @Global()
 @Module({
