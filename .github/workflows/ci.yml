@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    types: [closed]
+    types: [opened, synchronize, reopened]
     branches: [dev, main]
 
 env:
@@ -10,7 +10,6 @@ env:
 
 jobs:
   lint:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -27,7 +26,6 @@ jobs:
       - run: npm run lint
 
   typecheck:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -200,25 +198,3 @@ jobs:
       - run: npm ci
 
       - run: npm run build
-
-  release:
-    if: github.event.pull_request.merged == true && (github.base_ref == 'dev' || github.base_ref == 'refs/heads/dev')
-    needs: [build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - run: npm ci
-
-      - run: npx semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
