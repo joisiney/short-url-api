@@ -14,43 +14,14 @@ import {
   MinLength,
   Validate,
   ValidateIf,
-  ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
   IsUrl,
 } from 'class-validator';
-import { isFQDN, isURL } from 'validator';
-import { isIPv4 } from 'node:net';
-
-function envScalarToString(value: unknown): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  return '';
-}
-
-@ValidatorConstraint({ name: 'isHostLike', async: false })
-export class IsHostLikeConstraint implements ValidatorConstraintInterface {
-  validate(value: unknown): boolean {
-    if (typeof value !== 'string' || value.length === 0) {
-      return false;
-    }
-    if (value === 'localhost') {
-      return true;
-    }
-    if (isIPv4(value)) {
-      return true;
-    }
-    return isFQDN(value, { require_tld: false, allow_underscores: true });
-  }
-
-  defaultMessage(args: ValidationArguments): string {
-    return `${args.property} deve ser localhost, um IPv4 ou um hostname válido`;
-  }
-}
+import { isURL } from 'validator';
+import { IsHostLikeConstraint } from '@shared/validation/is-host-like.constraint';
+import { envScalarToString } from '@shared/validation/env-scalar-to-string';
+import { PgConnectionEnvDto } from './pg-connection-env.dto';
 
 @ValidatorConstraint({ name: 'isCorsOriginList', async: false })
 export class IsCorsOriginListConstraint implements ValidatorConstraintInterface {
@@ -74,7 +45,7 @@ export class IsCorsOriginListConstraint implements ValidatorConstraintInterface 
   }
 }
 
-export class EnvVariables {
+export class EnvVariables extends PgConnectionEnvDto {
   @IsIn(['development', 'test', 'production'])
   NODE_ENV!: 'development' | 'test' | 'production';
 
@@ -138,75 +109,17 @@ export class EnvVariables {
   @IsBoolean()
   APP_ENABLE_SWAGGER!: boolean;
 
-  @Validate(IsHostLikeConstraint)
-  DB_HOST!: string;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1024)
-  @Max(65535)
-  DB_PORT!: number;
-
-  @Transform(({ value }: { value: unknown }): string =>
-    envScalarToString(value).trim(),
-  )
-  @IsString()
-  @MinLength(1)
-  @MaxLength(63, { message: 'DB_NAME não pode exceder 63 caracteres' })
-  @Matches(/^[a-zA-Z0-9_-]+$/, {
-    message: 'DB_NAME deve conter apenas letras, números, hífens e underscores',
-  })
-  DB_NAME!: string;
-
-  @Transform(({ value }: { value: unknown }): string =>
-    envScalarToString(value).trim(),
-  )
-  @IsString()
-  @MinLength(1)
-  @MaxLength(63, { message: 'DB_USER não pode exceder 63 caracteres' })
-  @Matches(/^[a-zA-Z0-9_-]+$/, {
-    message: 'DB_USER deve conter apenas letras, números, hífens e underscores',
-  })
-  DB_USER!: string;
-
-  @IsString()
-  @MinLength(8, { message: 'DB_PASSWORD deve ter no mínimo 8 caracteres' })
-  @MaxLength(128, { message: 'DB_PASSWORD não pode exceder 128 caracteres' })
-  @Matches(/[A-Z]/, {
-    message: 'DB_PASSWORD deve conter ao menos uma letra maiúscula',
-  })
-  @Matches(/[a-z]/, {
-    message: 'DB_PASSWORD deve conter ao menos uma letra minúscula',
-  })
-  @Matches(/\d/, { message: 'DB_PASSWORD deve conter ao menos um número' })
-  @Matches(/[^A-Za-z0-9]/, {
-    message: 'DB_PASSWORD deve conter ao menos um caractere especial',
-  })
-  DB_PASSWORD!: string;
-
-  @Transform(({ value }: { value: unknown }): unknown => {
-    if (value === 'true' || value === true) {
-      return true;
-    }
-    if (value === 'false' || value === false) {
-      return false;
-    }
-    return value;
-  })
-  @IsBoolean()
-  DB_SSL!: boolean;
-
   @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(100)
-  DB_POOL_MIN!: number;
+  PG_POOL_MIN!: number;
 
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(1000)
-  DB_POOL_MAX!: number;
+  PG_POOL_MAX!: number;
 
   @Type(() => Number)
   @IsInt()
@@ -214,7 +127,7 @@ export class EnvVariables {
   @Max(86_400_000, {
     message: 'Timeout não pode exceder 24 horas (86400000ms)',
   })
-  DB_IDLE_TIMEOUT_MS!: number;
+  PG_IDLE_TIMEOUT_MS!: number;
 
   @Type(() => Number)
   @IsInt()
@@ -222,7 +135,7 @@ export class EnvVariables {
   @Max(86_400_000, {
     message: 'Timeout não pode exceder 24 horas (86400000ms)',
   })
-  DB_CONNECTION_TIMEOUT_MS!: number;
+  PG_CONNECTION_TIMEOUT_MS!: number;
 
   @Validate(IsHostLikeConstraint)
   REDIS_HOST!: string;
@@ -234,11 +147,11 @@ export class EnvVariables {
   REDIS_PORT!: number;
 
   @IsString()
-  @MinLength(8, { message: 'REDIS_PASSWORD deve ter no mínimo 8 caracteres' })
+  @MinLength(8, { message: 'REDIS_PWD deve ter no mínimo 8 caracteres' })
   @MaxLength(128, {
-    message: 'REDIS_PASSWORD não pode exceder 128 caracteres',
+    message: 'REDIS_PWD não pode exceder 128 caracteres',
   })
-  REDIS_PASSWORD!: string;
+  REDIS_PWD!: string;
 
   @Type(() => Number)
   @IsInt()

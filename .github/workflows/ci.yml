@@ -1,10 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+    branches: [dev, main]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -64,19 +63,19 @@ jobs:
     needs: [lint, typecheck]
     env: &test_runtime_env
       NODE_ENV: test
-      DB_HOST: localhost
-      DB_PORT: 5432
-      DB_NAME: short_url_test
-      DB_USER: postgres
-      DB_PASSWORD: Pg!Strong123
-      DB_SSL: false
-      DB_POOL_MIN: 1
-      DB_POOL_MAX: 5
-      DB_IDLE_TIMEOUT_MS: 10000
-      DB_CONNECTION_TIMEOUT_MS: 5000
+      PG_HOST: localhost
+      PG_PORT: 5432
+      PG_NAME: short_url_test
+      PG_USER: postgres
+      PG_PWD: Pg!Strong123
+      PG_SSL: false
+      PG_POOL_MIN: 1
+      PG_POOL_MAX: 5
+      PG_IDLE_TIMEOUT_MS: 10000
+      PG_CONNECTION_TIMEOUT_MS: 5000
       REDIS_HOST: localhost
       REDIS_PORT: 6379
-      REDIS_PASSWORD: Redis!Strong123
+      REDIS_PWD: Redis!Strong123
       REDIS_DB: 1
       REDIS_TLS_ENABLED: false
       REDIS_CONNECT_TIMEOUT_MS: 5000
@@ -112,7 +111,7 @@ jobs:
           - 6379:6379
         env:
           ALLOW_EMPTY_PASSWORD: 'no'
-          REDIS_PASSWORD: Redis!Strong123
+          REDIS_PWD: Redis!Strong123
         options: >-
           --health-cmd "redis-cli -a Redis!Strong123 ping"
           --health-interval 10s
@@ -161,7 +160,7 @@ jobs:
           - 6379:6379
         env:
           ALLOW_EMPTY_PASSWORD: 'no'
-          REDIS_PASSWORD: Redis!Strong123
+          REDIS_PWD: Redis!Strong123
         options: >-
           --health-cmd "redis-cli -a Redis!Strong123 ping"
           --health-interval 10s

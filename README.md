@@ -308,7 +308,7 @@ A organização é por feature/domínio. Regras de negócio vivem nos use cases;
 cp .env.example .env
 ```
 
-2. Ajuste os valores conforme necessário. Variáveis obrigatórias: `DB_*`, `REDIS_*`, `APP_*`.
+2. Ajuste os valores conforme necessário. Variáveis obrigatórias: `PG_*`, `REDIS_*`, `APP_*`.
 3. Para testes, existe `.env.test`; integração e e2e usam esse arquivo automaticamente.
 
 ## Como subir localmente
