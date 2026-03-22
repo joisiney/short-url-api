@@ -1,16 +1,16 @@
 name: CI
 
 on:
-  push:
-    branches: [dev]
   pull_request:
-    branches: [dev]
+    types: [closed]
+    branches: [dev, main]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   lint:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -27,6 +27,7 @@ jobs:
       - run: npm run lint
 
   typecheck:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -201,7 +202,7 @@ jobs:
       - run: npm run build
 
   release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event.pull_request.merged == true && github.base_ref == 'refs/heads/main'
     needs: [build]
     runs-on: ubuntu-latest
     permissions:
