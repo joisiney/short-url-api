@@ -240,7 +240,7 @@ describe('API HTTP (e2e)', () => {
     it('deve retornar X-Trace-Id quando traceparent é enviado', async () => {
       const traceId = '4bf92f3577b34da6a3ce929d0e0e4736';
       const spanId = '00f067aa0ba902b7';
-      const traceparent = `${traceId}-${spanId}-01`;
+      const traceparent = `00-${traceId}-${spanId}-01`;
 
       const res = await request(app.getHttpServer())
         .get(`${prefix}/shorten/n0p3`)
