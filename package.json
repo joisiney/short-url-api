@@ -31,6 +31,7 @@
     "docker:api:refresh": "docker compose up -d --build --force-recreate api",
     "clear": "node -e \"const { rmSync } = require('node:fs'); ['node_modules', 'dist', 'coverage', 'coverage-e2e', 'coverage-integration'].forEach((path) => rmSync(path, { recursive: true, force: true }));\"",
     "reset": "npm run clear && node -e \"const { rmSync } = require('node:fs'); rmSync('package-lock.json', { force: true });\"",
+    "reset:all": "docker compose -f docker-compose.yml down --remove-orphans && npm run reset",
     "prepare": "husky"
   },
   "dependencies": {
@@ -63,6 +64,8 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
@@ -77,6 +80,7 @@
     "husky": "^9.1.7",
     "jest": "^30.0.0",
     "prettier": "^3.4.2",
+    "semantic-release": "^25.0.3",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",

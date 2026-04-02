@@ -7,10 +7,10 @@ export function collectEnvCrossRuleViolations(
 ): EnvCrossRuleIssue[] {
   const issues: EnvCrossRuleIssue[] = [];
 
-  if (env.DB_POOL_MAX < env.DB_POOL_MIN) {
+  if (env.PG_POOL_MAX < env.PG_POOL_MIN) {
     issues.push({
-      path: 'DB_POOL_MAX',
-      message: `DB_POOL_MAX (${env.DB_POOL_MAX}) deve ser >= DB_POOL_MIN (${env.DB_POOL_MIN})`,
+      path: 'PG_POOL_MAX',
+      message: `PG_POOL_MAX (${env.PG_POOL_MAX}) deve ser >= PG_POOL_MIN (${env.PG_POOL_MIN})`,
     });
   }
 
@@ -27,10 +27,10 @@ export function collectEnvCrossRuleViolations(
         message: 'REDIS_TLS_ENABLED deve ser true em produção',
       });
     }
-    if (!env.DB_SSL) {
+    if (!env.PG_SSL) {
       issues.push({
-        path: 'DB_SSL',
-        message: 'DB_SSL deve ser true em produção',
+        path: 'PG_SSL',
+        message: 'PG_SSL deve ser true em produção',
       });
     }
     if (env.APP_CORS_ORIGIN.includes('*')) {
@@ -48,13 +48,13 @@ export function collectEnvCrossRuleViolations(
   }
 
   if (
-    env.DB_CONNECTION_TIMEOUT_MS > 0 &&
-    env.DB_IDLE_TIMEOUT_MS > 0 &&
-    env.DB_CONNECTION_TIMEOUT_MS >= env.DB_IDLE_TIMEOUT_MS
+    env.PG_CONNECTION_TIMEOUT_MS > 0 &&
+    env.PG_IDLE_TIMEOUT_MS > 0 &&
+    env.PG_CONNECTION_TIMEOUT_MS >= env.PG_IDLE_TIMEOUT_MS
   ) {
     issues.push({
-      path: 'DB_CONNECTION_TIMEOUT_MS',
-      message: 'DB_CONNECTION_TIMEOUT_MS deve ser menor que DB_IDLE_TIMEOUT_MS',
+      path: 'PG_CONNECTION_TIMEOUT_MS',
+      message: 'PG_CONNECTION_TIMEOUT_MS deve ser menor que PG_IDLE_TIMEOUT_MS',
     });
   }
 

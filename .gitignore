@@ -1,4 +1,3 @@
-adr/
 node_modules/
 .env
 .DS_Store
@@ -6,3 +5,4 @@ dist/
 coverage/
 coverage-integration/
 coverage-e2e/
+.cursor/
